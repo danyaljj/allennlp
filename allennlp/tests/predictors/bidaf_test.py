@@ -13,6 +13,9 @@ class TestBidafPredictor(AllenNlpTestCase):
                 "passage": "One time I was writing a unit test, and it succeeded on the first attempt."
         }
 
+        print("self.FIXTURES_ROOT")
+        print(self.FIXTURES_ROOT)
+
         archive = load_archive(self.FIXTURES_ROOT / 'bidaf' / 'serialization' / 'model.tar.gz')
         predictor = Predictor.from_archive(archive, 'machine-comprehension')
 

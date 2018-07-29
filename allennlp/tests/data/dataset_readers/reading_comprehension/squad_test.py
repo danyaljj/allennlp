@@ -9,6 +9,7 @@ from allennlp.common.testing import AllenNlpTestCase
 class TestSquadReader:
     @pytest.mark.parametrize("lazy", (True, False))
     def test_read_from_file(self, lazy):
+        print(" . . . ")
         reader = SquadReader(lazy=lazy)
         instances = ensure_list(reader.read(AllenNlpTestCase.FIXTURES_ROOT / 'data' / 'squad.json'))
         assert len(instances) == 5
