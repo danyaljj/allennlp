@@ -43,13 +43,13 @@ class NumpyEncoder(json.JSONEncoder):
 def solve(question, paragraph, model, dataset_reader, answers):
     instance = dataset_reader.text_to_instance(question, paragraph)
     instances = [instance]
-    # dataset = Batch(instances)
-    # dataset.index_instances(model.vocab)
-    # cuda_device = model._get_prediction_device()
-    # model_input = dataset.as_tensor_dict(cuda_device=cuda_device)
-    # outputs = model(**model_input)
+    dataset = Batch(instances)
+    dataset.index_instances(model.vocab)
+    cuda_device = model._get_prediction_device()
+    model_input = dataset.as_tensor_dict(cuda_device=cuda_device)
+    outputs = model(**model_input)
 
-    with open('out22.txt', 'a') as ff:
+    with open('out22-adv.txt', 'a') as ff:
         ff.write(question + "\n" + paragraph + "\n" + str(json.dumps(answers)) + "\n")
     # return outputs
 
@@ -69,23 +69,23 @@ def solve_sample_question():
     question = "What kind of test succeeded on its first attempt?"
     paragraph = "One time I was writing a unit test, and it succeeded on the first attempt."
 
-    a = solve(question, paragraph, model, dataset_reader)
+    a = solve(question, paragraph, model, dataset_reader, ["unit test"])
     print("")
 
 def solve_squad_questions():
     model, dataset_reader = load_model()
-
-    dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/squad-dev-v1.1.json"
+    # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/squad-dev-v1.1.json"
+    dataset_file = "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifySample.json"
     with open(dataset_file) as file:
         dataset_json = json.load(file)
         dataset = dataset_json['data']
         for article in dataset:
             for paragraph in article['paragraphs']:
-                for qa in paragraph['qas']:
-                    solve(qa['question'], paragraph['context'], model, dataset_reader, qa['answers'])
-                    break
-                # break
-            # break
+                if len(paragraph['qas']) > 1:
+                    continue
+                else:
+                    for qa in paragraph['qas']:
+                        solve(qa['question'], paragraph['context'], model, dataset_reader, qa['answers'])
 
 def sample_clustering():
     k_clusters = 1
@@ -317,6 +317,7 @@ def find_eigen_values():
 
 
     questions = []
+    labels = []
     with open(questions_file) as f:
         content = f.read().splitlines()
         for i, l in enumerate(content):
@@ -329,10 +330,65 @@ def find_eigen_values():
                 # print(l)
                 ans = json.loads(l)
                 questions[int(i/3)]["a"] = [c['text'] for c in ans]
+                labels.append(ans[0]['text'])
 
     mat = numpy.array(features)
     mu = np.mean(mat, axis=0)
     mat_normalized = mat - mu
+
+    import matplotlib.pyplot as plt
+    from sklearn.manifold import TSNE
+    # from sklearn.decomposition import PCA
+    # pca = PCA(n_components=5)
+    # pca.fit(mat)
+    # X_pca = pca.transform(mat)
+    # print(X_pca.shape)
+
+    # X_embedded = TSNE(n_components=2).fit_transform(mat)
+    # print(X_embedded.shape)
+    # fig, ax = plt.subplots()
+    # plt.scatter(X_embedded[:, 0], X_embedded[:, 1])
+    # plt.ylabel('Eigenvalues')
+    # label = np.array(['label'])
+    # plt.ylabel('Eigenvalues')
+    # for i, txt in enumerate(labels):
+    #     if  i % 40 == 0:
+    #         ax.annotate(txt, (X_embedded[i, 0], X_embedded[i, 1]))
+    # plt.show()
+
+    # import csv
+    # with open('qa_nn_tsne.csv', 'w', newline='') as csvfile:
+    #     spamwriter = csv.writer(csvfile)
+    #     for i, row in enumerate(X_embedded):
+    #         row_tmp = [row[0], row[1], labels[i]]
+    #         spamwriter.writerow(row_tmp)
+
+    # from sklearn.decomposition import PCA
+    # pca = PCA(n_components=10)
+    # pca.fit(mat)
+
+    # def draw_vector(v0, v1, ax=None):
+    #     ax = ax or plt.gca()
+    #     arrowprops = dict(arrowstyle='->',
+    #                       linewidth=2,
+    #                       shrinkA=0, shrinkB=0)
+    #     ax.annotate('', v1, v0, arrowprops=arrowprops)
+    #
+    # # plot data
+    # plt.scatter(mat[:, 0], mat[:, 1], alpha=0.2)
+    # for length, vector in zip(pca.explained_variance_, pca.components_):
+    #     v = vector * 3 * np.sqrt(length)
+    #     draw_vector(pca.mean_, pca.mean_ + v)
+    # plt.axis('equal')
+
+    # X_pca = pca.transform(mat)
+    # print("original shape:   ", mat.shape)
+    # print("transformed shape:", X_pca.shape)
+    # X_new = pca.inverse_transform(X_pca)
+    # plt.scatter(mat[:, 0], mat[:, 1], alpha=0.2)
+    # plt.scatter(X_new[:, 0], X_new[:, 1], alpha=0.8)
+    # plt.axis('equal')
+    # plt.show()
 
     U, s, Vh = linalg.svd(mat_normalized, full_matrices=False)
 
@@ -340,61 +396,88 @@ def find_eigen_values():
     # and take the top-k elements
     # and remember their indices
 
-    # UT = np.transpose(U)[0]
-    sorted_indices_small_to_big = sorted(range(len(np.transpose(U)[999])), key=lambda k: np.transpose(U)[999][k])
-    top = sorted_indices_small_to_big[-10:]
-
-    print("top: ")
-    for i in top:
-        print("--")
-        print("Instance id: " + str(i))
-        print(questions[i]["p"])
-        print(questions[i]["q"])
-        print("Gold: " + str(questions[i]["a"]))
-
-    print("----------------")
-    print("bottom: ")
-    bottom = sorted_indices_small_to_big[:10]
+    import matplotlib.pyplot as plt
 
 
-    for i in bottom:
-        print("--")
-        print("Instance id: " + str(i))
-        print(questions[i]["p"])
-        print(questions[i]["q"])
-        print("Gold: " + str(questions[i]["a"]))
+    # Projections on the i-th eigenvector
+    i = 1
+    a = np.transpose(U)[i]
 
-    exact_match = []
-    f1 = []
+    import csv
+    with open('projection_onto_eg1-try2.csv', 'w', newline='') as csvfile:
+        spamwriter = csv.writer(csvfile)
+        for i, row in enumerate(a):
+            qq = questions[i]["q"].split()[0:3]
+            qPlusA = ' '.join(qq) + "? " + labels[i]
+            row_tmp = [row, qPlusA]
+            spamwriter.writerow(row_tmp)
 
-    for i in sorted_indices_small_to_big:
-        print("--")
-        print("Instance id: " + str(i))
-        print(questions[i]["p"])
-        print(questions[i]["q"])
-        print("Gold: " + str(questions[i]["a"]))
-        pred = pred_ans[i]
-        exact_match.append(metric_max_over_ground_truths(
-            exact_match_score, pred, questions[i]["a"]))
-        f1.append(metric_max_over_ground_truths(
-            f1_score, pred, questions[i]["a"]))
+    plt.hist(a, bins='auto')  # arguments are passed to np.histogram
+    plt.title("Histogram of the projected values onto the third eigen-vector. ")
+    plt.show()
 
-    # N = 120
-    # cumsum, moving_aves = [0], []
-    #
-    # for i, x in enumerate(exact_match, 1):
-    #     cumsum.append(cumsum[i - 1] + x)
-    #     if i >= N:
-    #         moving_ave = (cumsum[i] - cumsum[i - N]) / N
-    #         # can do stuff with moving_ave here
-    #         moving_aves.append(moving_ave)
-    #
-    # import matplotlib.pyplot as plt
-    # plt.plot(moving_aves)
-    # plt.ylabel('Eigenvalues')
-    # plt.ylim(ymax=1)  # adjust the max leaving min unchanged
-    # plt.ylim(ymin=0)  # adjust the min leaving max unchanged
-    # plt.show()
+    # sorted_indices_small_to_big = sorted(range(len(np.transpose(U)[0])), key=lambda k: np.transpose(U)[0][k])
+
+    # UT = np.amax(abs(np.transpose(U)[0:10]), axis=0)
+    # pca_scores = X_pca[:,0]
+    # pca_scores = np.amax(abs(X_pca), axis=1)
+    if False:
+        sorted_indices_small_to_big = sorted(range(len(np.transpose(U)[999])), key=lambda k: np.transpose(U)[999][k])
+        # sorted_indices_small_to_big = sorted(range(len(UT)), key=lambda k: UT[k])
+        sorted_indices_small_to_big = sorted(range(len(pca_scores)), key=lambda k: pca_scores[k])
+        top = sorted_indices_small_to_big[-10:]
+
+        print("top: ")
+        for i in top:
+            print("--")
+            print("Instance id: " + str(i))
+            print(questions[i]["p"])
+            print(questions[i]["q"])
+            print("Gold: " + str(questions[i]["a"]))
+
+        print("----------------")
+        print("bottom: ")
+        bottom = sorted_indices_small_to_big[:10]
+
+        for i in bottom:
+            print("--")
+            print("Instance id: " + str(i))
+            print(questions[i]["p"])
+            print(questions[i]["q"])
+            print("Gold: " + str(questions[i]["a"]))
+
+        exact_match = []
+        f1 = []
+
+        for i in sorted_indices_small_to_big:
+            print("--")
+            print("Instance id: " + str(i))
+            print(questions[i]["p"])
+            print(questions[i]["q"])
+            print("Gold: " + str(questions[i]["a"]))
+            pred = pred_ans[i]
+            exact_match.append(metric_max_over_ground_truths(
+                exact_match_score, pred, questions[i]["a"]))
+            f1.append(metric_max_over_ground_truths(
+                f1_score, pred, questions[i]["a"]))
+
+        N = 200
+        cumsum, moving_aves = [0], []
+
+        for i, x in enumerate(exact_match, 1):
+            cumsum.append(cumsum[i - 1] + x)
+            if i >= N:
+                moving_ave = (cumsum[i] - cumsum[i - N]) / N
+                # can do stuff with moving_ave here
+                moving_aves.append(moving_ave)
+
+        import matplotlib.pyplot as plt
+        plt.plot(moving_aves)
+        plt.ylabel('score (F1) ')
+        plt.xlabel('Instances sorted based on the *maximum* of eigenvectors, corresponding to the top 10 eigenvalues (with PCA)')
+        plt.ylim(ymax=1)  # adjust the max leaving min unchanged
+        plt.ylim(ymin=0)  # adjust the min leaving max unchanged
+        plt.show()
 
     # ymin, ymax = plt.ylim()  # return the current ylim
     # print(exact_match.tolist())
@@ -425,10 +508,88 @@ def find_eigen_values():
 
     # print("asasd")
 
+def load_questions(activation_f, question_f, max_size = -1):
+    activations_file = "/Users/daniel/ideaProjects/allennlp/" + activation_f
+    questions_file = "/Users/daniel/ideaProjects/allennlp/" + question_f
+
+    features = []
+    pred_ans = []
+    with open(activations_file) as f:
+        content = f.read().splitlines()
+        for i, l in enumerate(content):
+            # print(i)
+            # print(l[0:100])
+            if i % 2 == 0:
+                data = json.loads(l)
+                # print(len(data))
+                features.append(data)
+            else:
+                pred_ans.append(l)
+
+            if(max_size > -1 and len(pred_ans) > max_size):
+                break
+
+    questions = []
+    labels = []
+    with open(questions_file) as f:
+        content = f.read().splitlines()
+        for i, l in enumerate(content):
+            print(i)
+            print(l[0:100])
+            if i % 3 == 0:
+                questions.append({})
+                questions[int(i / 3)]["q"] = l
+            elif i % 3 == 1:
+                questions[int(i / 3)]["p"] = l
+            elif i % 3 == 2:
+                ans = json.loads(l)
+                questions[int(i / 3)]["a"] = [c['text'] for c in ans]
+                labels.append(ans[0]['text'])
+
+            if (max_size > -1 and len(labels) > max_size):
+                break
+    mat = numpy.array(features)
+
+    return (mat, labels, questions, pred_ans)
+
+def project_adversarials_with_tsne():
+    import matplotlib.pyplot as plt
+    from sklearn.manifold import TSNE
+
+    (mat, labels, questions, pred_ans) = load_questions("out3.txt", "out22.txt", max_size=-1)
+    (mat_ad, labels_ad, questions_ad, pred_ans_ad) = load_questions("out33-adv.txt", "out22-adv.txt", max_size=100)
+
+    ones = numpy.ones(len(labels))
+    zeros = numpy.zeros(len(labels_ad))
+
+    mat_concat = np.concatenate((mat, mat_ad), axis=0)
+    labels_concat = np.concatenate((labels, labels_ad))
+    color_ids = np.concatenate((ones, zeros))
+    color = ['red' if l == 0 else 'green' for l in color_ids]
+
+    X_embedded = TSNE(n_components=2).fit_transform(mat_concat)
+    print(X_embedded.shape)
+    fig, ax = plt.subplots()
+    plt.scatter(X_embedded[:, 0], X_embedded[:, 1], color=color, alpha=0.2)
+    for i, txt in enumerate(labels_concat):
+        print(i)
+        if  i > len(labels): # or i % 25 == 0
+            ax.annotate(txt, (X_embedded[i, 0], X_embedded[i, 1]), fontsize=7)
+    plt.show()
+
+    # import csv
+    # with open('qa_nn_tsne_adv.csv', 'w', newline='') as csvfile:
+    #     spamwriter = csv.writer(csvfile)
+    #     for i, row in enumerate(X_embedded):
+    #         row_tmp = [row[0], row[1], labels[i]]
+    #         spamwriter.writerow(row_tmp)
+
+
 if __name__ == "__main__":
     # solve_sample_question()
     # solve_squad_questions()
     # sample_clustering()
     # cluster_predictions()
     # example_hierarchical_clustering()
-    find_eigen_values()
+    # find_eigen_values()
+    project_adversarials_with_tsne()

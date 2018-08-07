@@ -321,7 +321,7 @@ class BidirectionalAttentionFlow(Model):
             # print("span_end_logits: " + str(len(span_end_logits.data.numpy().flatten())))
 
             concat = span_start_input_selected + span_end_input_selected
-            with open('out33.txt', 'a') as f:
+            with open('out33-adv.txt', 'a') as f:
                 f.write(json.dumps(concat, cls=NumpyEncoder) + "\n")
                 f.write(best_span_string + "\n")
 
