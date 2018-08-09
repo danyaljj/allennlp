@@ -651,7 +651,8 @@ def processOutputOfMturk():
         annotation_map[key].append(labels)
 
     import csv
-    with open('Batch_3333123_batch_results.csv') as csv_file:
+    # with open('Batch_3333123_batch_results.csv') as csv_file:
+    with open('Batch_3333447_batch_results.csv') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         line_count = 0
         for row in csv_reader:
@@ -688,8 +689,25 @@ def processOutputOfMturk():
 
     # extract the type of the question
     # print(annotation_map)
+
+    from collections import Counter
+
+    output = []
+
     for key in annotation_map.keys():
         print(key + str(annotation_map[key]))
+        flatened_labels = [item for sublist in annotation_map[key] for item in sublist]
+        list_of_labels = [x.split("-")[1] for x in flatened_labels]
+        counts_of_labels = dict(Counter(list_of_labels))
+        print(key)
+        if len(key.split("(Answer:")) > 1:
+            q = key.split("(Answer:")[0]
+            a = key.split("(Answer:")[1][0:-1]
+            output.append([q, a, counts_of_labels])
+
+    with open('question_type_annotations.json', 'w') as outfile:
+        json.dump(output, outfile)
+
 
 if __name__ == "__main__":
     # solve_sample_question()
@@ -700,5 +718,5 @@ if __name__ == "__main__":
     # find_eigen_values()
     # project_adversarials_with_tsne()
     # filter_squad_questions()
-    printQuestionsForTypingTask()
-    # processOutputOfMturk()
+    # printQuestionsForTypingTask()
+    processOutputOfMturk()

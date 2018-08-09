@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -83,7 +84,7 @@ class BidirectionalAttentionFlow(Model):
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super(BidirectionalAttentionFlow, self).__init__(vocab, regularizer)
 
-        print("init . . . ")
+        # print("init . . . ")
 
         self._text_field_embedder = text_field_embedder
         self._highway_layer = TimeDistributed(Highway(text_field_embedder.get_output_dim(),
@@ -96,12 +97,12 @@ class BidirectionalAttentionFlow(Model):
         encoding_dim = phrase_layer.get_output_dim()
         modeling_dim = modeling_layer.get_output_dim()
         span_start_input_dim = encoding_dim * 4 + modeling_dim
-        print("span_start_input_dim: " + str(span_start_input_dim))
+        # print("span_start_input_dim: " + str(span_start_input_dim))
         self._span_start_predictor = TimeDistributed(torch.nn.Linear(span_start_input_dim, 1))
 
         span_end_encoding_dim = span_end_encoder.get_output_dim()
         span_end_input_dim = encoding_dim * 4 + span_end_encoding_dim
-        print("span_end_input_dim: " + str(span_end_input_dim))
+        # print("span_end_input_dim: " + str(span_end_input_dim))
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
 
         # Bidaf has lots of layer dimensions which need to match up - these aren't necessarily
@@ -287,29 +288,21 @@ class BidirectionalAttentionFlow(Model):
             predicted_span = tuple(best_span[i].detach().cpu().numpy())
             start_offset = offsets[predicted_span[0]][0]
             end_offset = offsets[predicted_span[1]][1]
-            best_span_string = passage_str[start_offset:end_offset]
-            # output_dict['best_span_str'].append(best_span_string)
-            # answer_texts = metadata[i].get('answer_texts', [])
+            # best_span_string = passage_str[start_offset:end_offset]
 
-            # final_merged_passage_list = final_merged_passage.data.numpy()[0][start_offset]
-            # print("final_merged_passage: " + str(len(final_merged_passage_list)))
-            # with open('out3.txt', 'a') as f:
-            #     f.write(json.dumps(final_merged_passage.data.numpy().flatten(), cls=NumpyEncoder) + "\n")
-            # f.write(','.join(str(x) for x in (final_merged_passage.data.numpy().flatten())) + "\n")
-            # print("modeled_passage: " + str(len(modeled_passage.data.numpy().flatten())))
             span_start_input_selected = span_start_input.data.numpy()[0][predicted_span[0]]
-            print("span_start_input_selected: " + str(len(span_start_input_selected)))
+            # print("span_start_input_selected: " + str(len(span_start_input_selected)))
             # print("span_start_probs: " + str(len(span_start_probs.data.numpy().flatten())))
             # print("span_end_representation: " + str(len(span_end_representation.data.numpy().flatten())))
             # print("encoded_span_end: " + str(len(encoded_span_end.data.numpy().flatten())))
             span_end_input_selected = span_end_input.data.numpy()[0][predicted_span[1]]
-            print("span_end_input_selected: " + str(len(span_end_input_selected)))
+            # print("span_end_input_selected: " + str(len(span_end_input_selected)))
             # print("span_end_logits: " + str(len(span_end_logits.data.numpy().flatten())))
 
-            concat = span_start_input_selected + span_end_input_selected
-            with open('out33-adv.txt', 'a') as f:
-                f.write(json.dumps(concat, cls=NumpyEncoder) + "\n")
-                f.write(best_span_string + "\n")
+            # concat = span_start_input_selected + span_end_input_selected
+            # with open('out33-adv.txt', 'a') as f:
+            #     f.write(json.dumps(concat, cls=NumpyEncoder) + "\n")
+            #     f.write(best_span_string + "\n")
 
         # Compute the EM and F1 on SQuAD and add the tokenized input to the output.
         if metadata is not None:
@@ -334,7 +327,7 @@ class BidirectionalAttentionFlow(Model):
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        print("get metrics . . .")
+        # print("get metrics . . .")
         exact_match, f1_score = self._squad_metrics.get_metric(reset)
         return {
                 'start_acc': self._span_start_accuracy.get_metric(reset),
@@ -346,7 +339,7 @@ class BidirectionalAttentionFlow(Model):
 
     @staticmethod
     def get_best_span(span_start_logits: torch.Tensor, span_end_logits: torch.Tensor) -> torch.Tensor:
-        print("get best span . . . ")
+        # print("get best span . . . ")
         if span_start_logits.dim() != 2 or span_end_logits.dim() != 2:
             raise ValueError("Input shapes must be (batch_size, passage_length)")
         batch_size, passage_length = span_start_logits.size()
