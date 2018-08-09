@@ -87,6 +87,33 @@ def solve_squad_questions():
                     for qa in paragraph['qas']:
                         solve(qa['question'], paragraph['context'], model, dataset_reader, qa['answers'])
 
+def filter_squad_questions():
+    import json
+    import copy
+    dataset_file = "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifyAll.json"
+    dataset_new = {"data": []}
+
+    with open(dataset_file) as file:
+        dataset_json = json.load(file)
+        dataset = dataset_json['data']
+        # dataset_copy = copy.deepcopy(dataset)
+        for (aidx, article) in enumerate(dataset):
+            # for (pid, paragraph) in enumerate(article['paragraphs']):
+            # print("article: " + str(aidx) + " - paragraph: " + str(pid))
+            # dataset_new["data"]
+            paragraphs = dataset[aidx]['paragraphs']
+            paragraphs_new = [x for x in paragraphs if len(x['qas']) <= 1]
+            print("qas old: " + str(len(paragraphs)) + "  -  qas_new: " + str(len(paragraphs_new)))
+            # article[aidx] = paragraphs_new
+            dataset_new["data"].append({"paragraphs": paragraphs_new})
+            # break
+            # filtered_paragraphs = [x for x in article['paragraphs'] if len(article['paragraphs']) <= 1]
+            # article['paragraphs'] = filtered_paragraphs
+
+        with open('sample1k-HCVerifyAll-only-adversarial-instances.json', 'w') as outfile:
+            json.dump(dataset_new, outfile)
+
+
 def sample_clustering():
     k_clusters = 1
     from sklearn import cluster
@@ -585,6 +612,85 @@ def project_adversarials_with_tsne():
     #         spamwriter.writerow(row_tmp)
 
 
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+def printQuestionsForTypingTask():
+    dataset_file = "/Users/daniel/ideaProjects/allennlp/squad-train-v1.1.json"
+    questions = []
+    with open(dataset_file) as file:
+        dataset_json = json.load(file)
+        dataset = dataset_json['data']
+        for article in dataset[1:20]:
+            for paragraph in article['paragraphs']:
+                for qa in paragraph['qas']:
+                    line = ''.join([qa['question'], " (Answer: ", qa['answers'][0]["text"], ")"])
+                    questions.append(line)
+            # break
+
+    header  = ["question1", "question2", "question3", "question4", "question5", "question6", "question7", "question8", "question9", "question10"]
+
+    import csv
+    with open('mturk-input-2.csv', 'w', newline='') as csvfile:
+        spamwriter = csv.writer(csvfile)
+        spamwriter.writerow(header)
+        list = chunks(questions, 10)
+        for row in list:
+            if(len(row) == 10):
+                spamwriter.writerow(row)
+
+def processOutputOfMturk():
+    # read json
+    annotation_map = {} # map from question to their select labels
+
+    def addQuestions(key, labels):
+        if (key not in annotation_map):
+            annotation_map[key] = []
+        annotation_map[key].append(labels)
+
+    import csv
+    with open('Batch_3333123_batch_results.csv') as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        line_count = 0
+        for row in csv_reader:
+            if line_count == 0:
+                print(f'Column names are {", ".join(row)}')
+                line_count += 1
+            else:
+                # print(f'\t{row[0]} works in the {row[1]} department, and was born in {row[2]}.')
+                line_count += 1
+                questions = row[28:38]
+
+                labels = row[38:-2]
+                q1types = [x for x in labels if "q1-" in x]
+                q2types = [x for x in labels if "q2-" in x]
+                q3types = [x for x in labels if "q3-" in x]
+                q4types = [x for x in labels if "q4-" in x]
+                q5types = [x for x in labels if "q5-" in x]
+                q6types = [x for x in labels if "q6-" in x]
+                q7types = [x for x in labels if "q7-" in x]
+                q8types = [x for x in labels if "q8-" in x]
+                q9types = [x for x in labels if "q9-" in x]
+                q10types = [x for x in labels if "q10-" in x]
+
+                addQuestions(questions[0], q1types)
+                addQuestions(questions[1], q2types)
+                addQuestions(questions[2], q3types)
+                addQuestions(questions[3], q4types)
+                addQuestions(questions[4], q5types)
+                addQuestions(questions[5], q6types)
+                addQuestions(questions[6], q7types)
+                addQuestions(questions[7], q8types)
+                addQuestions(questions[8], q9types)
+                addQuestions(questions[9], q10types)
+
+    # extract the type of the question
+    # print(annotation_map)
+    for key in annotation_map.keys():
+        print(key + str(annotation_map[key]))
+
 if __name__ == "__main__":
     # solve_sample_question()
     # solve_squad_questions()
@@ -592,4 +698,7 @@ if __name__ == "__main__":
     # cluster_predictions()
     # example_hierarchical_clustering()
     # find_eigen_values()
-    project_adversarials_with_tsne()
+    # project_adversarials_with_tsne()
+    # filter_squad_questions()
+    printQuestionsForTypingTask()
+    # processOutputOfMturk()
