@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -48,7 +47,7 @@ class BidirectionalAttentionFlow(Model):
     phrase_layer : ``Seq2SeqEncoder``
         The encoder (with its own internal stacking) that we will use in between embedding tokens
         and doing the bidirectional attention.
-    attention_similarity_function : ``SimilarityFunction``
+    similarity_function : ``SimilarityFunction``
         The similarity function that we will use when comparing encoded passage and question
         representations.
     modeling_layer : ``Seq2SeqEncoder``
@@ -75,7 +74,7 @@ class BidirectionalAttentionFlow(Model):
                  text_field_embedder: TextFieldEmbedder,
                  num_highway_layers: int,
                  phrase_layer: Seq2SeqEncoder,
-                 attention_similarity_function: SimilarityFunction,
+                 similarity_function: SimilarityFunction,
                  modeling_layer: Seq2SeqEncoder,
                  span_end_encoder: Seq2SeqEncoder,
                  dropout: float = 0.2,
@@ -90,7 +89,7 @@ class BidirectionalAttentionFlow(Model):
         self._highway_layer = TimeDistributed(Highway(text_field_embedder.get_output_dim(),
                                                       num_highway_layers))
         self._phrase_layer = phrase_layer
-        self._matrix_attention = LegacyMatrixAttention(attention_similarity_function)
+        self._matrix_attention = LegacyMatrixAttention(similarity_function)
         self._modeling_layer = modeling_layer
         self._span_end_encoder = span_end_encoder
 
@@ -182,8 +181,6 @@ class BidirectionalAttentionFlow(Model):
             string from the original passage that the model thinks is the best answer to the
             question.
         """
-        print("forward step . . . ")
-
         embedded_question = self._highway_layer(self._text_field_embedder(question))
         embedded_passage = self._highway_layer(self._text_field_embedder(passage))
         batch_size = embedded_question.size(0)
@@ -220,10 +217,6 @@ class BidirectionalAttentionFlow(Model):
                                                                                     passage_length,
                                                                                     encoding_dim)
 
-        # print(question_passage_vector)
-        # print(question_passage_vector.data)
-        # print(question_passage_vector.shape)
-
         # Shape: (batch_size, passage_length, encoding_dim * 4)
         final_merged_passage = torch.cat([encoded_passage,
                                           passage_question_vectors,
@@ -236,8 +229,6 @@ class BidirectionalAttentionFlow(Model):
 
         # Shape: (batch_size, passage_length, encoding_dim * 4 + modeling_dim))
         span_start_input = self._dropout(torch.cat([final_merged_passage, modeled_passage], dim=-1))
-
-
         # Shape: (batch_size, passage_length)
         span_start_logits = self._span_start_predictor(span_start_input).squeeze(-1)
         # Shape: (batch_size, passage_length)
@@ -245,13 +236,10 @@ class BidirectionalAttentionFlow(Model):
 
         # Shape: (batch_size, modeling_dim)
         span_start_representation = util.weighted_sum(modeled_passage, span_start_probs)
-        # print("span_start_representation: " + str(len(span_start_representation.data.numpy().flatten())))
         # Shape: (batch_size, passage_length, modeling_dim)
         tiled_start_representation = span_start_representation.unsqueeze(1).expand(batch_size,
                                                                                    passage_length,
                                                                                    modeling_dim)
-
-        # print("tiled_start_representation: " + str(len(tiled_start_representation.data.numpy().flatten())))
 
         # Shape: (batch_size, passage_length, encoding_dim * 4 + modeling_dim * 3)
         span_end_representation = torch.cat([final_merged_passage,
@@ -259,13 +247,11 @@ class BidirectionalAttentionFlow(Model):
                                              tiled_start_representation,
                                              modeled_passage * tiled_start_representation],
                                             dim=-1)
-
         # Shape: (batch_size, passage_length, encoding_dim)
         encoded_span_end = self._dropout(self._span_end_encoder(span_end_representation,
                                                                 passage_lstm_mask))
         # Shape: (batch_size, passage_length, encoding_dim * 4 + span_end_encoding_dim)
         span_end_input = self._dropout(torch.cat([final_merged_passage, encoded_span_end], dim=-1))
-
         span_end_logits = self._span_end_predictor(span_end_input).squeeze(-1)
         span_end_probs = util.masked_softmax(span_end_logits, passage_mask)
         span_start_logits = util.replace_masked_values(span_start_logits, passage_mask, -1e7)
@@ -385,32 +371,3 @@ class BidirectionalAttentionFlow(Model):
                     best_word_span[b, 1] = j
                     max_span_log_prob[b] = val1 + val2
         return best_word_span
-
-    @classmethod
-    def from_params(cls, vocab: Vocabulary, params: Params) -> 'BidirectionalAttentionFlow':
-        print("from params . . . ")
-        embedder_params = params.pop("text_field_embedder")
-        text_field_embedder = TextFieldEmbedder.from_params(vocab, embedder_params)
-        num_highway_layers = params.pop_int("num_highway_layers")
-        phrase_layer = Seq2SeqEncoder.from_params(params.pop("phrase_layer"))
-        similarity_function = SimilarityFunction.from_params(params.pop("similarity_function"))
-        modeling_layer = Seq2SeqEncoder.from_params(params.pop("modeling_layer"))
-        span_end_encoder = Seq2SeqEncoder.from_params(params.pop("span_end_encoder"))
-        dropout = params.pop_float('dropout', 0.2)
-
-        initializer = InitializerApplicator.from_params(params.pop('initializer', []))
-        regularizer = RegularizerApplicator.from_params(params.pop('regularizer', []))
-
-        mask_lstms = params.pop_bool('mask_lstms', True)
-        params.assert_empty(cls.__name__)
-        return cls(vocab=vocab,
-                   text_field_embedder=text_field_embedder,
-                   num_highway_layers=num_highway_layers,
-                   phrase_layer=phrase_layer,
-                   attention_similarity_function=similarity_function,
-                   modeling_layer=modeling_layer,
-                   span_end_encoder=span_end_encoder,
-                   dropout=dropout,
-                   mask_lstms=mask_lstms,
-                   initializer=initializer,
-                   regularizer=regularizer)
