@@ -92,7 +92,7 @@
     "cuda_device": -1,
     "learning_rate_scheduler": {
       "type": "reduce_on_plateau",
-      "factor": 0.005,
+      "factor": 0.001,
       "mode": "max",
       "patience": 2
     },

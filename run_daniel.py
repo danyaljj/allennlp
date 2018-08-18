@@ -6,6 +6,7 @@ import sys
 
 import numpy
 import numpy as np
+import re
 import sklearn
 import torch
 from scipy import linalg
@@ -50,11 +51,12 @@ def solve(question, paragraph, model, dataset_reader, answers):
     outputs = model(**model_input)
 
     with open('out22-adv.txt', 'a') as ff:
-        ff.write(question + "\n" + paragraph + "\n" + str(json.dumps(answers)) + "\n")
+        ff.write(question.replace('\n', ' ') + "\n" + paragraph.replace('\n', ' ') + "\n" + str(json.dumps(answers)) + "\n")
     # return outputs
 
 def load_model():
     archive = load_archive("https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz")
+    # archive = load_archive("finetune_factor_001_epoch_2/model.tar.gz")
     config = archive.config.duplicate()
     model = archive.model
     model.eval()
@@ -76,12 +78,15 @@ def solve_squad_questions():
     model, dataset_reader = load_model()
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/squad-dev-v1.1.json"
     dataset_file = "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifySample.json"
+    # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/cachedQuestions/process-bank-train.json"
+    # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/cachedQuestions/remedia-questions.json"
+    # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/cachedQuestions/Public-Feb2016-Elementary-NDMC-Train.json"
     with open(dataset_file) as file:
         dataset_json = json.load(file)
         dataset = dataset_json['data']
         for article in dataset:
             for paragraph in article['paragraphs']:
-                if len(paragraph['qas']) > 1:
+                if False and len(paragraph['qas']) > 1:
                     continue
                 else:
                     for qa in paragraph['qas']:
@@ -547,8 +552,8 @@ def load_questions(activation_f, question_f, max_size = -1):
             # print(i)
             # print(l[0:100])
             if i % 2 == 0:
+                # print(l)
                 data = json.loads(l)
-                # print(len(data))
                 features.append(data)
             else:
                 pred_ans.append(l)
@@ -584,24 +589,27 @@ def project_adversarials_with_tsne():
     from sklearn.manifold import TSNE
 
     (mat, labels, questions, pred_ans) = load_questions("out3.txt", "out22.txt", max_size=-1)
-    (mat_ad, labels_ad, questions_ad, pred_ans_ad) = load_questions("out33-adv.txt", "out22-adv.txt", max_size=100)
+    (mat_ad, labels_ad, questions_ad, pred_ans_ad) = load_questions("out33-adv.txt", "out22-adv.txt", max_size=120)
 
-    ones = numpy.ones(len(labels))
-    zeros = numpy.zeros(len(labels_ad))
+    # ones = numpy.ones(len(labels))
+    # zeros = numpy.zeros(len(labels_ad))
+
+    ones = numpy.ones(len(pred_ans))
+    zeros = numpy.zeros(len(pred_ans_ad))
 
     mat_concat = np.concatenate((mat, mat_ad), axis=0)
     labels_concat = np.concatenate((labels, labels_ad))
     color_ids = np.concatenate((ones, zeros))
     color = ['red' if l == 0 else 'green' for l in color_ids]
 
-    X_embedded = TSNE(n_components=2).fit_transform(mat_concat)
-    print(X_embedded.shape)
+    X_embedded = TSNE(n_components=2,init="pca").fit_transform(mat_concat)
+    # print(X_embedded.shape)
     fig, ax = plt.subplots()
-    plt.scatter(X_embedded[:, 0], X_embedded[:, 1], color=color, alpha=0.2)
+    plt.scatter(X_embedded[:, 0], X_embedded[:, 1], color=color, alpha=0.6, s=1.1)
     for i, txt in enumerate(labels_concat):
         print(i)
-        if  i > len(labels): # or i % 25 == 0
-            ax.annotate(txt, (X_embedded[i, 0], X_embedded[i, 1]), fontsize=7)
+        if  i > len(labels): # i % 10 < 1:
+            ax.annotate(txt, (X_embedded[i, 0] * 0.98, X_embedded[i, 1]), fontsize=6.5)
     plt.show()
 
     # import csv
@@ -651,41 +659,49 @@ def processOutputOfMturk():
         annotation_map[key].append(labels)
 
     import csv
-    # with open('Batch_3333123_batch_results.csv') as csv_file:
+    lines = []
+    with open('Batch_3333123_batch_results.csv') as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        for row in csv_reader:
+            lines.append(row)
+
     with open('Batch_3333447_batch_results.csv') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
-        line_count = 0
         for row in csv_reader:
-            if line_count == 0:
-                print(f'Column names are {", ".join(row)}')
-                line_count += 1
-            else:
-                # print(f'\t{row[0]} works in the {row[1]} department, and was born in {row[2]}.')
-                line_count += 1
-                questions = row[28:38]
+            lines.append(row)
 
-                labels = row[38:-2]
-                q1types = [x for x in labels if "q1-" in x]
-                q2types = [x for x in labels if "q2-" in x]
-                q3types = [x for x in labels if "q3-" in x]
-                q4types = [x for x in labels if "q4-" in x]
-                q5types = [x for x in labels if "q5-" in x]
-                q6types = [x for x in labels if "q6-" in x]
-                q7types = [x for x in labels if "q7-" in x]
-                q8types = [x for x in labels if "q8-" in x]
-                q9types = [x for x in labels if "q9-" in x]
-                q10types = [x for x in labels if "q10-" in x]
+    line_count = 0
+    for row in lines :
+        if line_count == 0:
+            print(f'Column names are {", ".join(row)}')
+            line_count += 1
+        else:
+            # print(f'\t{row[0]} works in the {row[1]} department, and was born in {row[2]}.')
+            line_count += 1
+            questions = row[28:38]
 
-                addQuestions(questions[0], q1types)
-                addQuestions(questions[1], q2types)
-                addQuestions(questions[2], q3types)
-                addQuestions(questions[3], q4types)
-                addQuestions(questions[4], q5types)
-                addQuestions(questions[5], q6types)
-                addQuestions(questions[6], q7types)
-                addQuestions(questions[7], q8types)
-                addQuestions(questions[8], q9types)
-                addQuestions(questions[9], q10types)
+            labels = row[38:-2]
+            q1types = [x for x in labels if "q1-" in x]
+            q2types = [x for x in labels if "q2-" in x]
+            q3types = [x for x in labels if "q3-" in x]
+            q4types = [x for x in labels if "q4-" in x]
+            q5types = [x for x in labels if "q5-" in x]
+            q6types = [x for x in labels if "q6-" in x]
+            q7types = [x for x in labels if "q7-" in x]
+            q8types = [x for x in labels if "q8-" in x]
+            q9types = [x for x in labels if "q9-" in x]
+            q10types = [x for x in labels if "q10-" in x]
+
+            addQuestions(questions[0], q1types)
+            addQuestions(questions[1], q2types)
+            addQuestions(questions[2], q3types)
+            addQuestions(questions[3], q4types)
+            addQuestions(questions[4], q5types)
+            addQuestions(questions[5], q6types)
+            addQuestions(questions[6], q7types)
+            addQuestions(questions[7], q8types)
+            addQuestions(questions[8], q9types)
+            addQuestions(questions[9], q10types)
 
     # extract the type of the question
     # print(annotation_map)
@@ -700,7 +716,7 @@ def processOutputOfMturk():
         list_of_labels = [x.split("-")[1] for x in flatened_labels]
         counts_of_labels = dict(Counter(list_of_labels))
         print(key)
-        if len(key.split("(Answer:")) > 1:
+        if len(key.split("(Answer:")) > 1 and len(list_of_labels) > 0:
             q = key.split("(Answer:")[0]
             a = key.split("(Answer:")[1][0:-1]
             output.append([q, a, counts_of_labels])
@@ -708,6 +724,135 @@ def processOutputOfMturk():
     with open('question_type_annotations.json', 'w') as outfile:
         json.dump(output, outfile)
 
+def filter_questions_answer_types():
+    dataset_file = "/Users/daniel/ideaProjects/allennlp/squad-train-v1.1.json"
+
+    from ccg_nlpy import remote_pipeline
+    pipeline = remote_pipeline.RemotePipeline(server_api="http://macniece.seas.upenn.edu:4002")
+
+    dataset_new = {"data": []}
+
+    import copy
+
+    with open(dataset_file) as file:
+        dataset_json = json.load(file)
+        dataset = dataset_json['data']
+        for article in dataset:
+            paragraphs_new = []
+            for p in article['paragraphs']:
+                p_new = copy.deepcopy(p)
+                p_new["qas"] = []
+
+                for qa in p['qas']:
+                    a = qa['answers'][0]["text"]
+                    try:
+                        d = pipeline.doc(a)
+                        # print(a + " - " + str(d.get_ner_ontonotes) + " - " + str(d.get_ner_conll))
+                        # d.get_ner_conll
+
+                        conll_vu = d.get_ner_conll
+                        ontonotes_vu = d.get_ner_ontonotes
+
+                        if conll_vu.cons_list is None:
+                            conll_labels = []
+                        else:
+                            # print(conll_vu)
+                            conll_labels = set([x['label'] for x in conll_vu.cons_list])
+
+                        if ontonotes_vu.cons_list is None:
+                            onto_labels = []
+                        else:
+                            onto_labels = set([x['label'] for x in ontonotes_vu.cons_list])
+
+
+                        if ("PER" in conll_labels and len(conll_labels) == 1) or ("PERSON" in onto_labels and len(onto_labels) == 1):
+                            print("valid 'person' question: "  + str(qa))
+                            p_new["qas"].append(qa)
+
+                        # if ("ORG" in conll_labels and len(conll_labels) == 1) or ("ORG" in onto_labels and len(onto_labels) == 1):
+                        #     print("valid 'organization' question: "  + str(qa))
+                        #     p_new["qas"].append(qa)
+
+                        # if "DATE" in onto_labels and len(onto_labels) == 1:
+                        #     print("valid 'date' question: "  + str(qa))
+                        #     p_new["qas"].append(qa)
+                    except Exception:
+                        print("Exception . . . ")
+                        print(a)
+
+                if len(p_new["qas"]) > 0:
+                    paragraphs_new.append(p_new)
+            dataset_new["data"].append({"paragraphs": paragraphs_new})
+            # break
+
+        with open('squad_train_person_only.json', 'w') as outfile:
+            json.dump(dataset_new, outfile)
+
+import os
+import os.path
+
+
+def get_files(target_dir):
+    item_list = os.listdir(target_dir)
+
+    file_list = list()
+    for item in item_list:
+        item_dir = os.path.join(target_dir,item)
+        if os.path.isdir(item_dir):
+            file_list += get_files(item_dir)
+        else:
+            file_list.append(item_dir)
+    return file_list
+
+def load_babi_questions():
+    folder = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/babi_tasks_1-20_v1-2/en-10k/"
+
+    files = get_files(folder)
+
+    train_files = [x for x in files if "train.txt" in x]
+    test_files = [x for x in files if "test.txt" in x]
+
+    def read(ff):
+        paragraphs = []
+        with open(ff) as f:
+            file_name = ff.split("_")[-2]
+            content = f.read().splitlines()
+            sentences = ""
+            qas = []
+            for i, line in enumerate(content):
+                split = re.compile("^\d{1,3}|\t").split(line)
+                # print(line)
+                # print(content[i+1][0])
+                # print(split)
+                # split =  line.split("\t")
+                # paragraph sentence:
+                if len(split) == 2:
+                    sentences = sentences + " " + split[1].strip()
+                else:
+                    # question and answer
+                    ans = [{"answer_start": 0, "text": file_name}] # split[2].strip() file_name
+                    question = {"answers": ans, "question": split[1].strip(), "id": ""}
+                    qas.append(question)
+                    # end of paragraph; add the questions to the list
+                if i + 1 < len(content) and content[i+1][0] == "1":
+                    paragraphs.append({"context": sentences.strip(), "qas": qas})
+                    sentences = ""
+                    qas = []
+                    # break
+
+                # print(sentences)
+                # print(qas)
+                # print("----------")
+
+        return {"data": [{"paragraphs": paragraphs}]}
+
+    train_paragraphs = [read(f) for f in train_files]
+    test_paragraphs = [read(f) for f in test_files]
+    # return (train_paragraphs, test_paragraphs)
+    with open('babi-train-reasoning-types.json', 'w', newline='') as f:
+        f.write(json.dumps(train_paragraphs))
+    with open('babi-test-reasoning-types.json', 'w', newline='') as f:
+        f.write(json.dumps(test_paragraphs))
 
 if __name__ == "__main__":
     # solve_sample_question()
@@ -719,4 +864,6 @@ if __name__ == "__main__":
     # project_adversarials_with_tsne()
     # filter_squad_questions()
     # printQuestionsForTypingTask()
-    processOutputOfMturk()
+    # processOutputOfMturk()
+    # filter_questions_answer_types()
+    load_babi_questions()

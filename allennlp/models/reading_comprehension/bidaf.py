@@ -288,7 +288,7 @@ class BidirectionalAttentionFlow(Model):
             predicted_span = tuple(best_span[i].detach().cpu().numpy())
             start_offset = offsets[predicted_span[0]][0]
             end_offset = offsets[predicted_span[1]][1]
-            # best_span_string = passage_str[start_offset:end_offset]
+            best_span_string = passage_str[start_offset:end_offset]
 
             span_start_input_selected = span_start_input.data.numpy()[0][predicted_span[0]]
             # print("span_start_input_selected: " + str(len(span_start_input_selected)))
@@ -299,10 +299,10 @@ class BidirectionalAttentionFlow(Model):
             # print("span_end_input_selected: " + str(len(span_end_input_selected)))
             # print("span_end_logits: " + str(len(span_end_logits.data.numpy().flatten())))
 
-            # concat = span_start_input_selected + span_end_input_selected
-            # with open('out33-adv.txt', 'a') as f:
-            #     f.write(json.dumps(concat, cls=NumpyEncoder) + "\n")
-            #     f.write(best_span_string + "\n")
+            concat = span_start_input_selected + span_end_input_selected
+            with open('out33-adv.txt', 'a') as f:
+                f.write(json.dumps(concat, cls=NumpyEncoder) + "\n")
+                f.write(best_span_string.replace('\n', ' ') + "\n")
 
         # Compute the EM and F1 on SQuAD and add the tokenized input to the output.
         if metadata is not None:
