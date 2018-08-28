@@ -71,7 +71,7 @@ class SemanticRoleLabelerPredictor(Predictor):
     def _json_to_instance(self, json_dict: JsonDict):
         raise NotImplementedError("The SRL model uses a different API for creating instances.")
 
-    def _sentence_to_srl_instances(self, json_dict: JsonDict) -> List[Instance]:
+    def _sentence_to_srl_instances(self, json_dict: JsonDict) -> (List[Instance], List[int]):
         """
         The SRL model has a slightly different API from other models, as the model is run
         forward for every verb in the sentence. This means that for a single sentence, we need
@@ -92,6 +92,14 @@ class SemanticRoleLabelerPredictor(Predictor):
         """
         sentence = json_dict["sentence"]
         tokens = self._tokenizer.split_words(sentence)
+        char_offsets = [t.idx for t in tokens]
+        # for i, idx in enumerate(char_offsets):
+        #     if i + 1 < len(char_offsets):
+        #         end = char_offsets[i + 1] - 1
+        #         print("`" + sentence[idx:end] + "`")
+        #     else:
+        #         print("`" + sentence[idx: ] + "`")
+        # print("done")
         words = [token.text for token in tokens]
         instances: List[Instance] = []
         for i, word in enumerate(tokens):
@@ -100,7 +108,7 @@ class SemanticRoleLabelerPredictor(Predictor):
                 verb_labels[i] = 1
                 instance = self._dataset_reader.text_to_instance(tokens, verb_labels)
                 instances.append(instance)
-        return instances
+        return instances, char_offsets
 
     @overrides
     def predict_batch_json(self, inputs: List[JsonDict]) -> List[JsonDict]:
@@ -193,14 +201,14 @@ class SemanticRoleLabelerPredictor(Predictor):
                 {"verb": "...", "description": "...", "tags": [...]},
             ]}
         """
-        instances = self._sentence_to_srl_instances(inputs)
+        instances, char_offsets = self._sentence_to_srl_instances(inputs)
 
         if not instances:
             return sanitize({"verbs": [], "words": self._tokenizer.split_words(inputs["sentence"])})
 
         outputs = self._model.forward_on_instances(instances)
 
-        results = {"verbs": [], "words": outputs[0]["words"]}
+        results = {"verbs": [], "words": outputs[0]["words"], "char_offsets": char_offsets}
         for output in outputs:
             tags = output['tags']
             description = self.make_srl_string(output["words"], tags)
