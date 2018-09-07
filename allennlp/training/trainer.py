@@ -169,7 +169,7 @@ class Trainer:
                  shuffle: bool = True,
                  num_epochs: int = 20,
                  serialization_dir: Optional[str] = None,
-                 num_serialized_models_to_keep: int = 20,
+                 num_serialized_models_to_keep: int = 200,
                  keep_serialized_model_every_num_seconds: int = None,
                  model_save_interval: float = None,
                  cuda_device: Union[int, List] = -1,

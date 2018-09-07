@@ -9,7 +9,10 @@ import numpy as np
 import re
 import sklearn
 import torch
+from matplotlib import cm
 from scipy import linalg
+from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 from torch import nn
 
 import torch.nn.functional as F
@@ -33,7 +36,8 @@ from evaluate11 import metric_max_over_ground_truths, f1_score, exact_match_scor
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy import linalg as LA
-
+import pickle
+from allennlp.modules.elmo import Elmo, batch_to_ids
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -50,7 +54,7 @@ def solve(question, paragraph, model, dataset_reader, answers):
     model_input = dataset.as_tensor_dict(cuda_device=cuda_device)
     outputs = model(**model_input)
 
-    with open('out22-adv.txt', 'a') as ff:
+    with open('out22-ner-test.txt', 'a') as ff:
         ff.write(question.replace('\n', ' ') + "\n" + paragraph.replace('\n', ' ') + "\n" + str(json.dumps(answers)) + "\n")
     # return outputs
 
@@ -77,7 +81,10 @@ def solve_sample_question():
 def solve_squad_questions():
     model, dataset_reader = load_model()
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/squad-dev-v1.1.json"
-    dataset_file = "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifySample.json"
+    # dataset_file = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner.json"
+    dataset_file = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner_test_full.json"
+    # "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifySample.json"
+    # dataset_file = "/Users/daniel/ideaProjects/allennlp/babi-test.json" # "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifySample.json"
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/cachedQuestions/process-bank-train.json"
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/cachedQuestions/remedia-questions.json"
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/cachedQuestions/Public-Feb2016-Elementary-NDMC-Train.json"
@@ -85,7 +92,8 @@ def solve_squad_questions():
         dataset_json = json.load(file)
         dataset = dataset_json['data']
         for article in dataset:
-            for paragraph in article['paragraphs']:
+            for i, paragraph in enumerate(article['paragraphs']):
+                print("Progress: " + str(100.0 * i / len(article['paragraphs'])))
                 if False and len(paragraph['qas']) > 1:
                     continue
                 else:
@@ -543,7 +551,6 @@ def find_eigen_values():
 def load_questions(activation_f, question_f, max_size = -1):
     activations_file = "/Users/daniel/ideaProjects/allennlp/" + activation_f
     questions_file = "/Users/daniel/ideaProjects/allennlp/" + question_f
-
     features = []
     pred_ans = []
     with open(activations_file) as f:
@@ -588,8 +595,8 @@ def project_adversarials_with_tsne():
     import matplotlib.pyplot as plt
     from sklearn.manifold import TSNE
 
-    (mat, labels, questions, pred_ans) = load_questions("out3.txt", "out22.txt", max_size=-1)
-    (mat_ad, labels_ad, questions_ad, pred_ans_ad) = load_questions("out33-adv.txt", "out22-adv.txt", max_size=120)
+    (mat, labels, questions, pred_ans) = load_questions("out3.txt", "out22.txt", max_size=0)
+    (mat_ad, labels_ad, questions_ad, pred_ans_ad) = load_questions("out33-adv.txt", "out22-adv.txt", max_size=200)
 
     # ones = numpy.ones(len(labels))
     # zeros = numpy.zeros(len(labels_ad))
@@ -618,6 +625,488 @@ def project_adversarials_with_tsne():
     #     for i, row in enumerate(X_embedded):
     #         row_tmp = [row[0], row[1], labels[i]]
     #         spamwriter.writerow(row_tmp)
+
+def project_remedia_with_tsne():
+    import matplotlib.pyplot as plt
+    from sklearn.manifold import TSNE
+
+    (mat, labels, questions, pred_ans) = load_questions("out3.txt", "out22.txt", max_size=1200)
+    (mat_ad, labels_ad, questions_ad, pred_ans_ad) = load_questions("out33-rem.txt", "out22-rem.txt", max_size=100)
+
+    ones = numpy.ones(len(pred_ans))
+    zeros = numpy.zeros(len(pred_ans_ad))
+
+
+    question_initials = [" ".join(x["q"].split(" ")[:2]) for x in questions]
+    question_initials_ad = [" ".join(x["q"].split(" ")[:2]) for x in questions_ad]
+    for i, x in enumerate(labels):
+        labels[i] = question_initials[i] + "//" + labels[i]
+    for i, x in enumerate(labels_ad):
+        labels_ad[i] = question_initials_ad[i] + "//" + labels_ad[i]
+    mat_concat = np.concatenate((mat, mat_ad), axis=0)
+    labels_concat = np.concatenate((labels, labels_ad))
+    color_ids = np.concatenate((ones, zeros))
+    color = ['red' if l == 0 else 'green' for l in color_ids]
+
+    X_embedded = TSNE(n_components=2,init="pca").fit_transform(mat_concat)
+    # print(X_embedded.shape)
+    fig, ax = plt.subplots()
+    plt.scatter(X_embedded[:, 0], X_embedded[:, 1], color=color, alpha=0.6, s=1.1)
+    for i, txt in enumerate(labels_concat):
+        print(i)
+        if  i > len(labels): # i % 10 < 1:
+            ax.annotate(txt, (X_embedded[i, 0] * 0.98, X_embedded[i, 1]), fontsize=6.5)
+    plt.show()
+
+import matplotlib
+from matplotlib.cm import cool
+
+def get_n_colors(n):
+    return[ cool(float(i)/n) for i in range(n) ]
+
+
+def project_babi_with_tsne():
+    import matplotlib.pyplot as plt
+    from sklearn.manifold import TSNE
+
+    (mat, labels, questions, pred_ans) = load_questions("out3.txt", "out22.txt", max_size=0)
+    (mat_ad, labels_ad, questions_ad, pred_ans_ad) = load_questions("out33-adv.txt", "out22-adv.txt", max_size=-1)
+
+    # read the questions and remember question ids:
+    question_paragraph_id_map = {}
+    ff = "/Users/daniel/ideaProjects/allennlp/babi-test.json"
+    with open(ff) as file:
+        dataset_json = json.load(file)
+        dataset = dataset_json['data']
+        for article in dataset:
+            for paragraph in article['paragraphs']:
+                for qa in paragraph['qas']:
+                    key = qa['question'] + paragraph['context']
+                    id = qa['id']
+                    question_paragraph_id_map[key] = id
+
+    bibi_reasoning_types = [question_paragraph_id_map[x["q"]+x["p"]] for x in questions_ad]
+
+    # find the quality per reasoning type
+    for c in set(bibi_reasoning_types):
+        predictions_a = np.array([pred_ans_ad[i] for i, r in enumerate(bibi_reasoning_types) if r == c])
+        labels_a = np.array([labels_ad[i] for i, r in enumerate(bibi_reasoning_types) if r == c])
+        similarity = [f1_score(x,y) for x,y in zip(predictions_a, labels_a)]
+        assert len(predictions_a) == len(labels_a)
+        print(str(c) + " -> " + str(100.0 * sum(similarity) / len(predictions_a)))
+
+    similarity = [f1_score(x,y) for x,y in zip(pred_ans, labels)]
+    # assert len(pred_ans) == len(labels)
+    print("Squad -> " + str(100.0 * sum(similarity) / len(pred_ans)))
+
+    # bibi_unique_reasoning_categories = set(bibi_reasoning_types)
+    # color_map = get_n_colors(len(bibi_unique_reasoning_categories))
+    # type_to_color = dict(zip(reasoning_categories, color_map))
+    # reasoning_color_per_point = [type_to_color[x] for x in reasoning_types]
+    # ones = numpy.ones(len(labels))
+    # zeros = numpy.zeros(len(labels_ad))
+
+    # ones = numpy.ones(len(pred_ans))
+    # zeros = numpy.zeros(len(pred_ans_ad))
+    mat_concat = np.concatenate((mat, mat_ad), axis=0)
+    reasoning_types = ["squad"]*len(pred_ans) + bibi_reasoning_types
+    unique_reasoning_types = set(reasoning_types)
+    labels_concat = np.concatenate((labels, labels_ad))
+    pred_concat = np.concatenate((pred_ans, pred_ans_ad))
+    # color_ids = np.concatenate((ones, zeros))
+    # color = ['red' if l == 0 else 'green' for l in color_ids]
+
+    X_embedded = TSNE(n_components=2,init="pca").fit_transform(mat_concat)
+    # print(X_embedded.shape)
+    fig, ax = plt.subplots()
+    # plt.scatter(X_embedded[:, 0], X_embedded[:, 1], color=color, alpha=0.6, s=1.1)
+    # handles = plt.scatter(X_embedded[:, 0], X_embedded[:, 1], color=reasoning_color_per_point, alpha=0.6, s=1.1) # reasoning_types
+    for iter, c in enumerate(unique_reasoning_types):
+        X_selected = np.asarray([X_embedded[i, :] for i, r in enumerate(reasoning_types) if r == c and f1_score(pred_concat[i], labels_concat[i]) > 0.6])
+        plt.scatter(X_selected[:, 0], X_selected[:, 1], alpha=0.7, s=2, label=c) # color=color_map[iter],
+    # for i, txt in enumerate(labels_concat):
+    #     print(i)
+    #     if  i > len(labels): # i % 10 < 1:
+    #         ax.annotate(txt, (X_embedded[i, 0] * 0.98, X_embedded[i, 1]), fontsize=6.5)
+    # ax.get_legend_handles_labels
+    # ax.legend(["asad", "asdwewer"])
+    # ax.legend(["aswerwerad", "werasdwewer", "weyiruwyeori123", "msnbdm"])
+    # plt.colorbar()
+    # cmap = cm.get_cmap("viridis", 5)
+    # plt.table(cellText=[[x] for x in reasoning_categories], loc='lower right',
+    #           colWidths=[0.2], rowColours=cmap(np.array(reasoning_categories) - 1),
+    #           rowLabels=['label%d' % x for x in reasoning_categories],
+    #           colLabels=['classes'])
+    ax.legend()
+    plt.show()
+
+    # import csv
+    # with open('qa_nn_tsne_adv.csv', 'w', newline='') as csvfile:
+    #     spamwriter = csv.writer(csvfile)
+    #     for i, row in enumerate(X_embedded):
+    #         row_tmp = [row[0], row[1], labels[i]]
+    #         spamwriter.writerow(row_tmp)
+
+
+def project_ner_with_tsne():
+    import matplotlib.pyplot as plt
+    from sklearn.manifold import TSNE
+
+    (mat, labels, questions, pred_ans) = load_questions("out3.txt", "out22.txt", max_size=0)
+    (mat_ad, labels_ad, questions_ad, pred_ans_ad) = load_questions("out33-ner.txt", "out22-ner.txt", max_size=3000)
+
+    # read the questions and remember question ids:
+    question_paragraph_id_map = {}
+    ff = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner.json"
+    with open(ff) as file:
+        dataset_json = json.load(file)
+        dataset = dataset_json['data']
+        for article in dataset:
+            for paragraph in article['paragraphs']:
+                for qa in paragraph['qas']:
+                    key = qa['question'] + paragraph['context']
+                    id = qa['id']
+                    question_paragraph_id_map[key] = id
+
+    ner_label_per_question = [question_paragraph_id_map[x["q"]+x["p"]] for x in questions_ad]
+
+    target_labels = [
+        "NORP",
+        "GPE",
+        "LOC",
+        "EVENT",
+        "TIME",
+        "CARDINAL",
+        "WORK_OF_ART",
+        "ORDINAL",
+        "MONEY",
+        "ORG",
+        "PERSON",
+        "DATE"
+    ]
+
+    # find the quality per reasoning type
+    # for c in set(ner_label_per_question):
+    #     predictions_a = np.array([pred_ans_ad[i] for i, r in enumerate(ner_label_per_question) if r == c])
+    #     labels_a = np.array([labels_ad[i] for i, r in enumerate(ner_label_per_question) if r == c])
+    #     similarity = [f1_score(x,y) for x,y in zip(predictions_a, labels_a)]
+    #     assert len(predictions_a) == len(labels_a)
+    #     print(str(c) + " -> " + str(100.0 * sum(similarity) / len(predictions_a)))
+    #
+    # similarity = [f1_score(x,y) for x,y in zip(pred_ans, labels)]
+    # print("Squad -> " + str(100.0 * sum(similarity) / len(pred_ans)))
+
+    mat_concat = np.concatenate((mat, mat_ad), axis=0)
+    reasoning_types = ["squad"]*len(pred_ans) + ner_label_per_question
+    unique_ner_label = set(reasoning_types)
+    labels_concat = np.concatenate((labels, labels_ad))
+    pred_concat = np.concatenate((pred_ans, pred_ans_ad))
+
+    X_embedded = TSNE(n_components=2,init="pca").fit_transform(mat_concat)
+    fig, ax = plt.subplots()
+    for iter, c in enumerate(target_labels):
+        X_selected = np.asarray([X_embedded[i, :] for i, r in enumerate(reasoning_types) if r == c]) # and f1_score(pred_concat[i], labels_concat[i]) > 0.6
+        plt.scatter(X_selected[:, 0], X_selected[:, 1], alpha=1.0, s=4.5, label=c)
+
+    ax.legend()
+    plt.show()
+
+
+def dist(x, y):
+    return np.linalg.norm(x - y)
+
+
+def ner_few_shot():
+    # load instances
+    (mat_ad, labels_ad, questions_ad, pred_ans_ad) = load_questions("out33-ner-test.txt", "out22-ner-test.txt", max_size=1000000)
+
+    print("instances loaded: " + str(len(questions_ad)))
+
+    # read the questions and remember question ids:
+    question_paragraph_id_map = {}
+    ff = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner_test_full.json"
+    with open(ff) as file:
+        dataset_json = json.load(file)
+        dataset = dataset_json['data']
+        for article in dataset:
+            for paragraph in article['paragraphs']:
+                for qa in paragraph['qas']:
+                    key = qa['question'] + paragraph['context']
+                    id = qa['id']
+                    question_paragraph_id_map[key] = id
+    ner_label_per_question = [question_paragraph_id_map[x["q"] + x["p"]] for x in questions_ad]
+
+    # select representative instances
+    seen_size = 5000
+    seen_mat = mat_ad[0:seen_size]
+    seen_labels = ner_label_per_question[0:seen_size]
+
+    unseen_mat = mat_ad[seen_size:]
+    unseen_labels = ner_label_per_question[seen_size:]
+
+    target_labels = [
+        "NORP",
+        "GPE",
+        "LOC",
+        "EVENT",
+        "TIME",
+        "CARDINAL",
+        "WORK_OF_ART",
+        "ORDINAL",
+        "MONEY",
+        "ORG",
+        "PERSON",
+        "DATE",
+        "LANGUAGE",
+        "QUANTITY",
+        "PERCENT",
+        "FAC",
+        "LAW",
+        "PRODUCT"
+    ]
+
+    # find averaged centers
+    centers = {}
+    for l in target_labels:
+        selected = np.asarray([seen_mat[i, :] for i, r in enumerate(seen_labels) if r == l])[0:5]
+        print("Number of representative instances for label " + l + " -> " + str(len(selected)))
+        centers[l] = numpy.mean(selected, axis=0)
+        # print(len(seen_mat[0, :]))
+        # print(len(centers[l]))
+        assert len(centers[l]) == len(seen_mat[0, :])
+
+    tp_per_label = { l:0 for l in target_labels }
+    fp_per_label = { l:0 for l in target_labels }
+    fn_per_label = { l:0 for l in target_labels }
+
+    # do classification
+    print("Size of the test collection: " + str(len(unseen_mat)))
+    for i,m in enumerate(unseen_mat):
+        gold_label = unseen_labels[i]
+        if gold_label in target_labels:
+            predicted_label = -1
+            min_dist = numpy.math.inf
+            for l in centers.keys():
+                new_dist = dist(m, centers[l])
+                if new_dist < min_dist:
+                    min_dist = new_dist
+                    predicted_label = l
+            assert predicted_label != -1
+            if gold_label == predicted_label:
+                tp_per_label[gold_label] = tp_per_label[gold_label] + 1
+            else:
+                fp_per_label[predicted_label] = fp_per_label[predicted_label] + 1
+                fn_per_label[gold_label] = fn_per_label[gold_label] + 1
+
+    print("TP: " + str(tp_per_label))
+    print("FP: " + str(fp_per_label))
+    print("FN: " + str(fn_per_label))
+
+    for l in target_labels:
+        tp = tp_per_label[l]
+        fp = fp_per_label[l]
+        fn = fn_per_label[l]
+        # print("l: " + str(l))
+        # print("tp: " + str(tp))
+        # print("fp: " + str(fp))
+        # print("fn: " + str(fn))
+        if tp + fp == 0:
+            p = 0.0
+        else:
+            p = 100.0 * tp / (tp + fp)
+
+        if tp + fn == 0:
+            r = 0.0
+        else:
+            r = 100.0 * tp / (tp + fn)
+        if p + r == 0.0:
+            f1 = 0.0
+        else:
+            f1 = 2 * p * r / (p + r)
+        print("Label: " + str(l) + "\t" + str(p) + "\t" + str(r) + "\t" + str(f1))
+
+def typing_classifier():
+
+    elmoCache = ELMoCache()
+    elmoCache.load_from_disk()
+
+    # load instances
+    max_size = 10000
+    (bidaf_vectors, bidaf_pred, questions, pred_ans_ad) = load_questions("out33-ner-test.txt", "out22-ner-test.txt", max_size=max_size)
+
+    target_labels = [
+        "NORP",
+        "GPE",
+        "LOC",
+        "EVENT",
+        "TIME",
+        "CARDINAL",
+        "WORK_OF_ART",
+        "ORDINAL",
+        "MONEY",
+        "ORG",
+        "PERSON",
+        "DATE",
+        "LANGUAGE",
+        "QUANTITY",
+        "PERCENT",
+        "FAC",
+        "LAW",
+        "PRODUCT"
+    ]
+
+    # read the questions and remember question ids:
+    question_paragraph_id_map = {}
+    ff = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner_test_full.json"
+    with open(ff) as file:
+        dataset_json = json.load(file)
+        dataset = dataset_json['data']
+        for article in dataset:
+            for paragraph in article['paragraphs']:
+                for qa in paragraph['qas']:
+                    key = qa['question'] + paragraph['context']
+                    id = qa['id']
+                    question_paragraph_id_map[key] = id
+    ner_label_per_question = [question_paragraph_id_map[x["q"] + x["p"]] for x in questions]
+
+    # select representative instances
+    bidaf_vectors = [bidaf_vectors[i,:] for i, l in enumerate(ner_label_per_question) if l in target_labels]
+    questions = [questions[i] for i, l in enumerate(ner_label_per_question) if l in target_labels]
+    ner_label_per_question = [ner_label_per_question[i] for i, l in enumerate(ner_label_per_question) if l in target_labels]
+    # seen_size = int(0.5 * len(questions))
+    seen_size = int(len(questions) * 0.3)
+
+    # print("seen size before filtering: " + str(seen_size))
+    # max_per_label = 1000
+    # count_per_label = {l: 0 for l in target_labels}
+    # selected_indices = []
+    # for i,l in enumerate(ner_label_per_question):
+    #     if count_per_label[l] < max_per_label:
+    #         count_per_label[l] = count_per_label[l] + 1
+    #         selected_indices.append(i)
+
+    # bidaf_vectors = [bidaf_vectors[i] for i, l in enumerate(bidaf_vectors) if i in selected_indices or i > max(selected_indices)]
+    # questions = [questions[i] for i, l in enumerate(questions) if i in selected_indices or i > max(selected_indices)]
+    # ner_label_per_question = [ner_label_per_question[i] for i, l in enumerate(ner_label_per_question) if i in selected_indices or i > max(selected_indices)]
+
+    # find averaged centers
+    centers = {}
+    for l in target_labels:
+        selected = np.asarray([bidaf_vectors[i] for i in range(0,len(ner_label_per_question)) if ner_label_per_question[i] == l])
+        print("Number of representative instances for label " + l + " -> " + str(len(selected)))
+        centers[l] = numpy.mean(selected, axis=0)
+        # print(len(seen_mat[0, :]))
+        # print(len(centers[l]))
+        assert len(centers[l]) == len(bidaf_vectors[0])
+
+    def dist_to_centers(vec):
+        dist_vec = []
+        for l in centers.keys():
+            dist_vec.append(dist(vec, centers[l]))
+        # add the index of the minimum and 2nd minimum label
+        sorted_indices = sorted(range(len(dist_vec)), key=lambda k: dist_vec[k])  # indices of the distance, sorted, from smallest to the biggest
+        sorting_encoding = []
+        for idx in sorted_indices:
+            zero_vector = numpy.zeros(len(dist_vec))
+            zero_vector[idx] = 1
+            sorting_encoding.extend(zero_vector)
+        return dist_vec + sorting_encoding
+
+    elmo_vectors = []
+    elmo_bidaf_vectors = []
+    for i, x in enumerate(questions):
+        paragraph_vec = elmoCache.get_elmo([x["p"].split(" ")])
+        span_vec = elmoCache.get_elmo([bidaf_pred[i].split(" ")])
+        elmo_vec = paragraph_vec + span_vec
+        elmo_vectors.append(elmo_vec)
+        # print(len(list(bidaf_vec[i, :])))
+        bidaf_vec = list(bidaf_vectors[i]) + dist_to_centers(bidaf_vectors[i])
+        bidaf_vectors[i] = bidaf_vec
+        elmo_bidaf_vectors.append(elmo_vec + bidaf_vec)
+        if i % 100 == 0:
+            print(" - Processed " + str(100.0 * i/len(questions)))
+
+    elmoCache.save_to_disk()
+
+    # selected_size = len(selected_indices)
+    seen_labels = ner_label_per_question[0:seen_size]
+    unseen_labels = ner_label_per_question[seen_size:]
+    print("seen size before filtering: " + str(seen_size))
+
+    seen_elmo_vectors = elmo_vectors[0:seen_size]
+    unseen_elmo_vectors = elmo_vectors[seen_size:]
+
+    seen_bidaf_vectors = bidaf_vectors[0:seen_size]
+    unseen_bidaf_vectors = bidaf_vectors[seen_size:]
+
+    seen_elmo_bidaf_vectors = elmo_bidaf_vectors[0:seen_size]
+    unseen_elmo_bidaf_vectors = elmo_bidaf_vectors[seen_size:]
+
+    # elmo_mlp = MLPClassifier()
+    elmo_mlp = MLPClassifier() #LogisticRegression(multi_class="multinomial") #
+    elmo_mlp.fit(seen_elmo_vectors, seen_labels)
+    elmo_predictions = elmo_mlp.predict(unseen_elmo_vectors)
+
+    bidaf_mlp = MLPClassifier() #LogisticRegression(multi_class="multinomial") # MLPClassifier()
+    bidaf_mlp.fit(seen_bidaf_vectors, seen_labels)
+    bidaf_predictions = bidaf_mlp.predict(unseen_bidaf_vectors)
+
+    elmo_bidaf_mlp = MLPClassifier() # LogisticRegression(multi_class="multinomial") # MLPClassifier()
+    elmo_bidaf_mlp.fit(seen_elmo_bidaf_vectors, seen_labels)
+    elmo_bidaf_predictions = elmo_bidaf_mlp.predict(unseen_elmo_bidaf_vectors)
+
+    def evaluate(pred, gold):
+        tp_per_label = { l:0 for l in target_labels }
+        fp_per_label = { l:0 for l in target_labels }
+        fn_per_label = { l:0 for l in target_labels }
+
+        # do classification
+        for i,m in enumerate(pred):
+            gold_label = gold[i]
+            predicted_label = pred[i]
+            if gold_label == predicted_label:
+                tp_per_label[gold_label] = tp_per_label[gold_label] + 1
+            else:
+                fp_per_label[predicted_label] = fp_per_label[predicted_label] + 1
+                fn_per_label[gold_label] = fn_per_label[gold_label] + 1
+
+        print("TP: " + str(tp_per_label))
+        print("FP: " + str(fp_per_label))
+        print("FN: " + str(fn_per_label))
+
+        for l in target_labels:
+            tp = tp_per_label[l]
+            fp = fp_per_label[l]
+            fn = fn_per_label[l]
+            if tp + fp == 0:
+                p = 0.0
+            else:
+                p = 100.0 * tp / (tp + fp)
+
+            if tp + fn == 0:
+                r = 0.0
+            else:
+                r = 100.0 * tp / (tp + fn)
+
+            if p + r == 0.0:
+                f1 = 0.0
+            else:
+                f1 = 2 * p * r / (p + r)
+            print("Label: " + str(l) + "\t" + str(p) + "\t" + str(r) + "\t" + str(f1))
+
+    print(len(seen_elmo_vectors))
+    print(len(unseen_elmo_vectors))
+    print(len(seen_labels))
+    print(len(unseen_elmo_vectors))
+
+    print("ELMO predictions: ")
+    evaluate(elmo_predictions, unseen_labels)
+
+    print("Bidaf predictions: ")
+    evaluate(bidaf_predictions, unseen_labels)
+
+    print("ELMO + BiDAF predictions")
+    evaluate(elmo_bidaf_predictions, unseen_labels)
 
 
 def chunks(l, n):
@@ -791,6 +1280,20 @@ def filter_questions_answer_types():
 import os
 import os.path
 
+def find_str(s, char):
+    index = 0
+
+    if char in s:
+        c = char[0]
+        for ch in s:
+            if ch == c:
+                if s[index:index+len(char)] == char:
+                    return index
+
+            index += 1
+
+    return -1
+
 
 def get_files(target_dir):
     item_list = os.listdir(target_dir)
@@ -812,47 +1315,619 @@ def load_babi_questions():
     train_files = [x for x in files if "train.txt" in x]
     test_files = [x for x in files if "test.txt" in x]
 
-    def read(ff):
+    def read(file_list):
         paragraphs = []
-        with open(ff) as f:
-            file_name = ff.split("_")[-2]
-            content = f.read().splitlines()
-            sentences = ""
-            qas = []
-            for i, line in enumerate(content):
-                split = re.compile("^\d{1,3}|\t").split(line)
-                # print(line)
-                # print(content[i+1][0])
-                # print(split)
-                # split =  line.split("\t")
-                # paragraph sentence:
-                if len(split) == 2:
-                    sentences = sentences + " " + split[1].strip()
-                else:
-                    # question and answer
-                    ans = [{"answer_start": 0, "text": file_name}] # split[2].strip() file_name
-                    question = {"answers": ans, "question": split[1].strip(), "id": ""}
-                    qas.append(question)
-                    # end of paragraph; add the questions to the list
-                if i + 1 < len(content) and content[i+1][0] == "1":
-                    paragraphs.append({"context": sentences.strip(), "qas": qas})
-                    sentences = ""
-                    qas = []
-                    # break
+        for ff in file_list:
+            with open(ff) as f:
+                file_name = ff.split("_")[-2]
+                content = f.read().splitlines()
+                sentences = ""
+                qas = []
+                for i, line in enumerate(content):
+                    split = re.compile("^\d{1,3}|\t").split(line)
+                    # print(line)
+                    # print(content[i+1][0])
+                    # print(split)
+                    # split =  line.split("\t")
+                    # paragraph sentence:
+                    if len(split) == 2:
+                        sentences = (sentences + " " + split[1].strip()).strip()
+                    else:
+                        # question and answer
+                        ans_text = split[2].strip()
+                        idx = find_str(sentences, ans_text)
+                        if idx >= 0:
+                            ans = [{"answer_start": idx, "text": ans_text}]
+                            question = {"answers": ans, "question": split[1].strip(), "id": file_name}
+                            qas.append(question)
+                        # end of paragraph; add the questions to the list
+                    if i + 1 < len(content) and content[i+1][0] == "1":
+                        if len(qas) > 0:
+                            paragraphs.append({"context": sentences.strip(), "qas": qas})
+                        sentences = ""
+                        qas = []
+                        # break
 
-                # print(sentences)
-                # print(qas)
-                # print("----------")
+                    # print(sentences)
+                    # print(qas)
+                    # print("----------")
 
         return {"data": [{"paragraphs": paragraphs}]}
 
-    train_paragraphs = [read(f) for f in train_files]
-    test_paragraphs = [read(f) for f in test_files]
+    train_paragraphs = read(train_files)
+    test_paragraphs = read(test_files)
     # return (train_paragraphs, test_paragraphs)
-    with open('babi-train-reasoning-types.json', 'w', newline='') as f:
+    with open('babi-train.json', 'w', newline='') as f:
         f.write(json.dumps(train_paragraphs))
-    with open('babi-test-reasoning-types.json', 'w', newline='') as f:
+    with open('babi-test.json', 'w', newline='') as f:
         f.write(json.dumps(test_paragraphs))
+
+class ELMoCache():
+    cache = {}
+
+    def __init__(self, cache_file = "elmo.cache"):
+        self.cache_file = cache_file
+        self.elmo = load_elmo()
+
+    def load_from_disk(self):
+        with open(self.cache_file, 'rb') as handle:
+            self.cache = pickle.load(handle)
+
+    def save_to_disk(self):
+        with open(self.cache_file, 'wb') as handle:
+            pickle.dump(self.cache, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def get_elmo(self, sentence):
+        key = str(sentence)
+        if key in self.cache:
+            return self.cache[key]
+        else:
+            vectors = elmoize_sentence(sentence, self.elmo)
+            self.cache[key] = vectors
+            return vectors
+
+def read_ner_data():
+    folder = "/Users/daniel/ideaProjects/allennlp/ontonotes/ColumnFormat/"
+    train_files = get_files(folder + "Train")
+    test_files = get_files(folder + "Test")
+    dev_files = get_files(folder + "Dev")
+
+    def get_paragraphs(file):
+        paragraphs = []
+        tokens = []
+        labels = []
+        def create_ner_questions(tokensp, labelsp):
+            # first extract the labels
+            label_indices = []
+            label_list = []
+            start = -1
+            for i, l in enumerate(labelsp):
+                if l == "O" and i > 0 and labelsp[i-1] != "O":   # end of a label span
+                    assert start != -1
+                    label_indices.append((start, i))  # note that the end index is not inclusive
+                    label_list.append(labelsp[i-1].split("-")[1])
+                    start = -1
+                elif l != "O" and start == -1:
+                    start = i
+                elif l == "O":  # if we are outside, always set the start index to be -1.
+                    start = -1
+            qas = []
+            for i, span in enumerate(label_indices):
+                id = label_list[i]
+                ans = " ".join(tokensp[span[0]:span[1]])
+                ending = tokensp[-1]
+                if ending == ".":
+                    ending = "?"
+                question = " ".join(tokensp[:span[0]] + ["what"] + tokensp[span[1]:-1] + [ending])
+                paragraph = " ".join(tokensp)
+                char_idx = find_str(paragraph, ans)
+                ans = [{"answer_start": char_idx, "text": ans}]
+                question = {"answers": ans, "question": question, "id": id}
+                qas.append(question)
+                paragraphs.append({"context": paragraph, "qas": qas})
+
+        # iterate through sentences
+        with open(file) as f:
+            content = f.read().splitlines()
+            for l in content:
+                split = l.split("\t")
+                if len(split) > 2:
+                    tokens.append(split[5].strip().replace("/.", "."))
+                    labels.append(split[0].strip())
+                else: # new line
+                    # if len(tokens) > 7: # for now, restrict yourself to longer questions
+                    create_ner_questions(tokens, labels)
+                    tokens = []
+                    labels = []
+        return paragraphs
+
+
+    train_paragraphs = []
+    for f in train_files:
+        train_paragraphs.extend(get_paragraphs(f))
+
+    dev_paragraphs = []
+    for f in train_files:
+        dev_paragraphs.extend(get_paragraphs(f))
+
+    test_paragraphs = []
+    for f in train_files:
+        test_paragraphs.extend(get_paragraphs(f))
+
+    train_data =  {"data": [{"paragraphs": train_paragraphs}]}
+    test_data = {"data": [{"paragraphs": test_paragraphs}]}
+    dev_data = {"data": [{"paragraphs": dev_paragraphs}]}
+
+    with open('ontonotes_questions_ner_train_full.json', 'w', newline='') as f:
+        f.write(json.dumps(train_data))
+    with open('ontonotes_questions_ner_test_full.json', 'w', newline='') as f:
+        f.write(json.dumps(test_data))
+    with open('ontonotes_questions_ner_dev_full.json', 'w', newline='') as f:
+        f.write(json.dumps(dev_data))
+
+def load_elmo():
+
+    options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
+    weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
+
+    elmo = Elmo(options_file, weight_file, 2, dropout=0)
+    return elmo
+
+def elmoize_sentence(sentences, elmo):
+    character_ids = batch_to_ids(sentences)
+
+    embeddings = elmo(character_ids)
+
+    elmo_representations = embeddings['elmo_representations']
+
+    # embeddings['elmo_representations'][0]
+    vect1 = numpy.mean(embeddings['elmo_representations'][0].data.cpu().numpy(), 1)
+    vect2 = numpy.mean(embeddings['elmo_representations'][1].data.cpu().numpy(), 1)
+
+    return list(vect1[0]) + list(vect1[0])
+
+def test_elmo():
+    from allennlp.modules.elmo import Elmo, batch_to_ids
+
+    options_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
+    weight_file = "https://s3-us-west-2.amazonaws.com/allennlp/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
+
+    elmo = Elmo(options_file, weight_file, 2, dropout=0)
+
+    # use batch_to_ids to convert sentences to character ids
+    sentences = [['elrtuelirt', 'tomorrow', 'kjashkjashd', 'First', 'sentence', '.'], ['First', 'sentence', '.']]
+    character_ids = batch_to_ids(sentences)
+
+    embeddings = elmo(character_ids)
+    # print(embeddings)
+    # print(embeddings)
+    print(len(embeddings['elmo_representations']))
+    print((embeddings['elmo_representations'][0]).shape)
+
+def read_and_save_arc():
+    # first read arc sentences (got em from Tushar)
+
+    # 2nd: read the arc analysis
+
+    pass
+
+def read_and_save_lambada():
+    pass
+
+def print_output_weight_vector():
+    model, dataset_reader = load_model()
+
+    question = "What kind of test succeeded on its first attempt?"
+    paragraph = "One time I was writing a unit test, and it succeeded on the first attempt."
+
+    a = solve(question, paragraph, model, dataset_reader, ["unit test"])
+    pass
+
+def plot_matrix():
+    import numpy
+    import matplotlib.pylab as plt
+    m = [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
+
+
+    matrix = numpy.matrix(m)
+    fig, ax = plt.subplots()
+    im = ax.imshow(numpy.transpose(matrix), aspect='auto')
+    p_labels = ['the-iranian', 'iranian-language', 'language-or', 'or-iranic', 'iranic-language', 'language-form', 'form-a', 'a-branch', 'branch-of', 'of-the', 'the-indo-iranian', 'indo-iranian-language', 'language-,', ',-which', 'which-in', 'in-turn', 'turn-be', 'be-a', 'a-branch', 'branch-of', 'of-the', 'the-indo-european', 'indo-european-language', 'language-family', 'family-.', '.-the', 'the-speaker', 'speaker-of', 'of-iranian', 'iranian-language', 'language-be', 'be-know', 'know-as', 'as-iranian', 'iranian-people', 'people-.', '.-historical', 'historical-iranian', 'iranian-language', 'language-be', 'be-group', 'group-in', 'in-three', 'three-stage', 'stage-:', ':-old', 'old-iranian', 'iranian-(', '(-until', 'until-400', '400-bce', 'bce-)', ')-,', ',-middle', 'middle-iranian', 'iranian-(', '(-400', '400-bce', 'bce-–', '–-900', '900-ce', 'ce-)', ')-,', ',-and', 'and-new', 'new-iranian', 'iranian-(', '(-since', 'since-900', '900-ce', 'ce-)', ')-.', '.-of', 'of-the', 'the-old', 'old-iranian', 'iranian-language', 'language-,', ',-the', 'the-better', 'better-understand', 'understand-and', 'and-record', 'record-one', 'one-be', 'be-old', 'old-persian', 'persian-(', '(-a', 'a-language', 'language-of', 'of-achaemenid', 'achaemenid-iran', 'iran-)', ')-and', 'and-avestan', 'avestan-(', '(-the', 'the-language', 'language-of', 'of-the', 'the-avesta', 'avesta-)', ')-.', '.-middle', 'middle-iranian', 'iranian-language', 'language-include', 'include-middle', 'middle-persian', 'persian-(', '(-a', 'a-language', 'language-of', 'of-sassanid', 'sassanid-iran', 'iran-)', ')-,', ',-parthian', 'parthian-,', ',-and', 'and-bactrian', 'bactrian-.', '']
+    q_labels = ['what-be', 'be-the', 'the-iranic', 'iranic-language', 'language-a', 'a-subgroup', 'subgroup-of', 'of-?', '']
+    ax.set_yticks(range(len(q_labels)))
+    ax.set_xticks(range(len(p_labels)))
+
+    ax.set_yticklabels(q_labels)
+    ax.set_xticklabels(p_labels)
+    # plt.colorbar()
+    plt.setp(ax.get_xticklabels(), rotation=90, ha="right",
+             rotation_mode="anchor")
+    fig.tight_layout()
+    plt.rcParams["figure.figsize"] = (5, 20)
+    plt.show()
+
+def reorder_string(str, except_span):
+    from ccg_nlpy import remote_pipeline
+    pipeline = remote_pipeline.RemotePipeline(server_api="http://macniece.seas.upenn.edu:4002")
+    ta = pipeline.doc(str)
+    tokens = ta.get_tokens
+    char_offsets = ta.get_token_char_offsets
+
+    former_ans = ""
+    if except_span != None:
+        former_ans = str[except_span[0]:except_span[1]]
+
+    for i in range(1, len(tokens) - 1, 2):
+
+        if i+1 == len(tokens) - 1:  # don't swtich the final word.
+            break
+
+        s1 = char_offsets[i][0]
+        e1 = char_offsets[i][1]
+        s2 = char_offsets[i+1][0]
+        e2 = char_offsets[i+1][1]
+
+        char_middle1 = (s1 + e1)/2
+        char_middle2 = (s2 + e2) / 2
+
+        if except_span != None and char_middle1 >= except_span[0] and char_middle1 <= except_span[1]:   # of tokens cover the span, don't shuffle it.
+            continue
+
+        if except_span != None and char_middle2 >= except_span[0] and char_middle2 <= except_span[1]:   # of tokens cover the span, don't shuffle it.
+            continue
+
+        str = str[0:s1] + str[s2:e2] + str[e1:s2] + str[s1:e1] + str[e2:]
+
+    if except_span != None:
+        new_ans = str[except_span[0]:except_span[1]]
+        # assert new_ans == former_ans, "answers have changed / new_ans: " + new_ans + " / former_ans: " + former_ans
+        if new_ans != former_ans:
+            return ""
+
+    return str
+
+def shuffle_bidaf_questions():
+    dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/squad-dev-v1.1.json"
+
+    # rerordering questions
+    # with open(dataset_file) as file:
+    #     dataset_json = json.load(file)
+    #     dataset = dataset_json['data']
+    #     for aid, article in enumerate(dataset):
+    #         print("Progress: " + str(100.0 * aid / len(dataset)))
+    #         for pid, paragraph in enumerate(article['paragraphs']):
+    #             for qid, qa in enumerate(paragraph['qas']):
+    #                 dataset_json["data"][aid]['paragraphs'][pid]["qas"][qid]['question'] = reorder_string(qa['question'], None)
+    #                 # qa['question'] = reorder_string(qa['question'], None)
+    #             # break
+    #         # break
+    #     with open('squad-dev-v1.1-reordered-questions.json', 'w') as outfile:
+    #         json.dump(dataset_json, outfile)
+
+    # reordering paragraphs
+    with open(dataset_file) as file:
+        dataset_json = json.load(file)
+        dataset = dataset_json['data']
+        for aid, article in enumerate(dataset):
+            print("Progress: " + str(100.0 * aid / len(dataset)))
+            new_paragraphs = []
+            for pid, paragraph in enumerate(article['paragraphs']):
+                # dataset_json["data"][aid]['paragraphs'][pid]["qas"][qid]['question'] = reorder_string(qa['question'], None)
+                context = paragraph['context']
+                for qid, qa in enumerate(paragraph['qas']):
+                    ans = qa["answers"][0]
+                    start = ans["answer_start"]
+                    end = ans["answer_start"] + len(ans["text"])
+                    new_context = reorder_string(context, (start, end))
+                    if new_context != "":
+                        new_paragraphs.append({"context": new_context, "qas": [qa]})
+            dataset_json["data"][aid]['paragraphs'] = new_paragraphs
+
+        with open('squad-dev-v1.1-reordered-paragraphs.json', 'w') as outfile:
+            json.dump(dataset_json, outfile)
+
+
+                    # reordering paragraphs and question s
+
+def sample_shuffle():
+    str = "Super Bowl 50 was an American football game to determine the champion of the National Football League (NFL) for the 2015 season. The American Football Conference (AFC) champion Denver Broncos defeated the National Football Conference (NFC) champion Carolina Panthers 24\u201310 to earn their third Super Bowl title. The game was played on February 7, 2016, at Levi's Stadium in the San Francisco Bay Area at Santa Clara, California. As this was the 50th Super Bowl, the league emphasized the \"golden anniversary\" with various gold-themed initiatives, as well as temporarily suspending the tradition of naming each Super Bowl game with Roman numerals (under which the game would have been known as \"Super Bowl L\"), so that the logo could prominently feature the Arabic numerals 50."
+    print(reorder_string(str, (177, 177 + len("Denver Broncos"))))
+    print(str)
+
+
+def load_srl_model():
+    archive = load_archive("https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.05.25.tar.gz")
+    # config = archive.config.duplicate()
+    model = archive.model
+    model.eval()
+    predictor = Predictor.from_archive(archive, 'semantic-role-labeling')
+    return predictor
+
+def test_srl():
+    predictor = load_srl_model()
+    inputs = {
+        "sentence": "The game was played on February 7, 2016, at Levi's Stadium in the San Francisco Bay Area at Santa Clara, California."
+    }
+    result = predictor.predict_json(inputs)
+    print(result)
+
+def test_chunker():
+    from ccg_nlpy import remote_pipeline
+    pipeline = remote_pipeline.RemotePipeline(server_api="http://macniece.seas.upenn.edu:4002")
+    ta = pipeline.doc("Two partially reusable launch systems were developed, the Space Shuttle and Falcon 9.")
+    constituents = ta.get_shallow_parse
+    char_offsets = ta.get_token_char_offsets
+    print(constituents)
+    print(char_offsets)
+
+lowe_case_first_char = lambda s: s[:1].lower() + s[1:] if s else ''
+
+def replace_two_spans(str, span1, span2, char_offsets):
+    # first make sure span1 happens before span2
+    # print(span1)
+    # print(span2)
+    # print(char_offsets)
+    if span1["start"] < span2["start"]:
+        pass # good to go
+    else:
+        tmp = span1
+        span1 = span2
+        span2 = tmp
+
+    # make sure the spans don't have overlaps
+    assert span2["start"] >= span1["end"], "the spans have a little overlap"
+
+    # create the new string
+    s1 = char_offsets[span1["start"]][0]
+    e1 = char_offsets[span1["end"]-1][1]
+    s2 = char_offsets[span2["start"]][0]
+    e2 = char_offsets[span2["end"]-1][1]
+
+    # if the final character is the punctuation, don't nove it
+    # print(e2)
+    # print(str[e2-1])
+    # print(len(str))
+
+    # if e2 >= len(str) and (str[e2-1] == '.' or str[e2-1] == '?' ):
+    #     e2 = e2 - 1
+
+    # print(" -> Replace `" + str[s1:e1] + "` with `" + str[s2:e2] + "`")
+
+    # print("S1: `" + str[s1:e1] + "`")
+    # print("between: `" + str[e1:s2] + "`")
+    # print("S2: `" + str[s2:e2] + "`")
+
+    # print("Begin: `" + str[0:s1] + "`")
+    # print("S1: `" + str[s1:e1] + "`")
+    # print("between: `" + str[e1:s2] + "`")
+    # print("S2: `" + str[s2:e2] + "`")
+    # print("End: `" + str[e2:] + "`")
+    # print("Before: " + str)
+    if s1 == 0:
+        str = str[0:s1] + str[s2:e2] + str[e1:s2] + lowe_case_first_char(str[s1:e1]) + str[e2:]
+    else:
+        str = str[0:s1] + str[s2:e2] + str[e1:s2] + str[s1:e1] + str[e2:]
+    # print("After:  " + str)
+    # print("-------")
+    return str
+
+def shuffle_with_chunker():
+    from ccg_nlpy import remote_pipeline
+    pipeline = remote_pipeline.RemotePipeline(server_api="http://macniece.seas.upenn.edu:4002")
+
+    def shuffle(str_old, illegal_span = None):
+        ta = pipeline.doc(str_old)
+        constituents = ta.get_shallow_parse
+        char_offsets = ta.get_token_char_offsets
+        shuffled_indices = []
+        str1 = str_old
+        for i, c in enumerate(constituents):
+            if (i < len(constituents) - 1) and constituents[i]["label"] == "VP":
+                # print(constituents[i-1]["label"] + constituents[i+1]["label"])
+                # make sure the cons before and after are NPs
+                if constituents[i - 1]["label"] == "NP" and constituents[i + 1]["label"] == "NP" \
+                        and (i - 1) not in shuffled_indices and (i + 1) not in shuffled_indices:
+                    c_before = constituents[i - 1]
+                    c_after = constituents[i + 1]
+
+                    # don't do shuffling if the illegal span has overlaps with the correct span:
+                    begin = char_offsets[c_before["start"]][0]
+                    end = char_offsets[c_after["end"] - 1][1]
+                    if illegal_span == None or (illegal_span != None and ((end <= illegal_span[0]) or (begin >= illegal_span[1]))):
+                        shuffled_indices.append(i - 1)
+                        shuffled_indices.append(i + 1)
+                        # print("--> done")
+                        str_old = replace_two_spans(str_old, c_before, c_after, char_offsets)
+                    else:
+                        pass
+                        # print("--> not done")
+                        # print("begin: " + str(begin))
+                        # print("end: " + str(end))
+                        # print("illegal_span: " + str(illegal_span))
+                        # print("shuffled_indices: " + str(shuffled_indices))
+        if str1 == str_old:
+            return ""
+        else:
+            return str_old
+
+    # shuffle("What religion were the Normans")
+
+    dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/squad-dev-v1.1.json"
+
+    # rerordering questions
+    # with open(dataset_file) as file:
+    #     dataset_json = json.load(file)
+    #     dataset = dataset_json['data']
+    #     for aid, article in enumerate(dataset):
+    #         print("Progress: " + str(100.0 * aid / len(dataset)))
+    #         for pid, paragraph in enumerate(article['paragraphs']):
+    #             new_questions = []
+    #             for qid, qa in enumerate(paragraph['qas']):
+    #                 # print("===============")
+    #                 str_old = qa['question']
+    #                 # print("Original: " + str_old )
+    #                 str_new = shuffle(str_old)
+    #                 # print("Shuffled: " + str_new)
+    #                 if str_new != "":
+    #                     question = {"answers": qa["answers"], "question": str_new, "id": qa["id"]}
+    #                     new_questions.append(question)
+    #                 # qa['question'] = reorder_string(qa['question'], None)
+    #             dataset_json["data"][aid]['paragraphs'][pid]["qas"] = new_questions
+    #             # break
+    #         # break
+    #     with open('squad-dev-v1.1-reordered-questions-chunker.json', 'w') as outfile:
+    #         json.dump(dataset_json, outfile)
+
+    # reordering paragraphs
+    with open(dataset_file) as file:
+        dataset_json = json.load(file)
+        dataset = dataset_json['data']
+        for aid, article in enumerate(dataset):
+            print("Progress: " + str(100.0 * aid / len(dataset)))
+            new_paragraphs = []
+            for pid, paragraph in enumerate(article['paragraphs']):
+                # dataset_json["data"][aid]['paragraphs'][pid]["qas"][qid]['question'] = reorder_string(qa['question'], None)
+                context = paragraph['context']
+                for qid, qa in enumerate(paragraph['qas']):
+                    print("===============")
+                    ans = qa["answers"][0]
+                    start = ans["answer_start"]
+                    end = ans["answer_start"] + len(ans["text"])
+                    print("Original: " + context)
+                    new_context = shuffle(context, (start, end))
+                    print("Shuffled: " + new_context)
+                    if new_context != "":
+                        new_paragraphs.append({"context": new_context, "qas": [qa]})
+            dataset_json["data"][aid]['paragraphs'] = new_paragraphs
+
+        with open('squad-dev-v1.1-reordered-paragraphs-chunker.json', 'w') as outfile:
+            json.dump(dataset_json, outfile)
+
+def shuffle_wiith_srl(sentence, srl_predictor):
+    pass
 
 if __name__ == "__main__":
     # solve_sample_question()
@@ -862,8 +1937,22 @@ if __name__ == "__main__":
     # example_hierarchical_clustering()
     # find_eigen_values()
     # project_adversarials_with_tsne()
+    # project_remedia_with_tsne()
+    # project_babi_with_tsne()
     # filter_squad_questions()
     # printQuestionsForTypingTask()
     # processOutputOfMturk()
     # filter_questions_answer_types()
-    load_babi_questions()
+    # load_babi_questions()
+    # read_ner_data()
+    # project_ner_with_tsne()
+    # ner_few_shot()
+    # test_elmo()
+    # typing_classifier()
+    # read_and_save_arc()
+    # print_output_weight_vector()
+    # plot_matrix()
+    # shuffle_bidaf_questions()
+    # test_srl()
+    # test_chunker()
+    shuffle_with_chunker()

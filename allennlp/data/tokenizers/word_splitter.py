@@ -150,4 +150,5 @@ class SpacyWordSplitter(WordSplitter):
     @overrides
     def split_words(self, sentence: str) -> List[Token]:
         # This works because our Token class matches spacy's.
-        return _remove_spaces(self.spacy(sentence))
+        split = self.spacy(sentence)
+        return _remove_spaces(split)
