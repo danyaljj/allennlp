@@ -4,26 +4,34 @@ import logging
 import os
 import sys
 
+
 import numpy
 import numpy as np
 import re
-import sklearn
-import torch
-from matplotlib import cm
+from sklearn.metrics import confusion_matrix
+# import sklearn
+# import torch
+# from matplotlib import cm
+# import sns as sns
+# import seagborn as sns; sns.set()
 from scipy import linalg
-from sklearn.linear_model import LogisticRegression
+# from sklearn.linear_model import LogisticRegression
+from sklearn.cluster import DBSCAN
+from sklearn.cluster import KMeans
 from sklearn.neural_network import MLPClassifier
-from torch import nn
+# from torch import nn
 
-import torch.nn.functional as F
+# import torch.nn.functional as F
 
-from allennlp.common.util import ensure_list
-from allennlp.data.dataset_readers import SquadReader
-from allennlp.models.archival import load_archive, Archive
+# from allennlp.common.util import ensure_list
+# from allennlp.data.dataset_readers import SquadReader
+# from allennlp.models.archival import load_archive, Archive
+# from allennlp.models.archival import load_archive
+from allennlp.models import load_archive
 from allennlp.predictors import Predictor
 from allennlp.data import DatasetReader
 from allennlp.data.dataset import Batch
-from sklearn import cluster
+from sklearn import cluster, metrics
 import time as time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -558,6 +566,10 @@ def load_questions(activation_f, question_f, max_size = -1):
         for i, l in enumerate(content):
             # print(i)
             # print(l[0:100])
+
+            if (max_size > -1 and len(pred_ans) > max_size):
+                break
+
             if i % 2 == 0:
                 # print(l)
                 data = json.loads(l)
@@ -565,8 +577,7 @@ def load_questions(activation_f, question_f, max_size = -1):
             else:
                 pred_ans.append(l)
 
-            if(max_size > -1 and len(pred_ans) > max_size):
-                break
+
 
     questions = []
     labels = []
@@ -674,7 +685,7 @@ def project_babi_with_tsne():
 
     # read the questions and remember question ids:
     question_paragraph_id_map = {}
-    ff = "/Users/daniel/ideaProjects/allennlp/babi-test.json"
+    ff = "/Users/daniel/ideaProjects/allennlp/QA_datasets/babi-test.json"
     with open(ff) as file:
         dataset_json = json.load(file)
         dataset = dataset_json['data']
@@ -696,56 +707,85 @@ def project_babi_with_tsne():
         print(str(c) + " -> " + str(100.0 * sum(similarity) / len(predictions_a)))
 
     similarity = [f1_score(x,y) for x,y in zip(pred_ans, labels)]
-    # assert len(pred_ans) == len(labels)
-    print("Squad -> " + str(100.0 * sum(similarity) / len(pred_ans)))
+    # print("Squad -> ", str(100.0 * sum(similarity) / len(pred_ans)))
 
-    # bibi_unique_reasoning_categories = set(bibi_reasoning_types)
-    # color_map = get_n_colors(len(bibi_unique_reasoning_categories))
-    # type_to_color = dict(zip(reasoning_categories, color_map))
-    # reasoning_color_per_point = [type_to_color[x] for x in reasoning_types]
-    # ones = numpy.ones(len(labels))
-    # zeros = numpy.zeros(len(labels_ad))
 
-    # ones = numpy.ones(len(pred_ans))
-    # zeros = numpy.zeros(len(pred_ans_ad))
     mat_concat = np.concatenate((mat, mat_ad), axis=0)
     reasoning_types = ["squad"]*len(pred_ans) + bibi_reasoning_types
-    unique_reasoning_types = set(reasoning_types)
+    unique_reasoning_types = list(set(bibi_reasoning_types))
+    # unique_reasoning_types_indices = list(range(len(unique_reasoning_types)))
+    bibi_reasoning_type_indices = [unique_reasoning_types.index(x) for x in bibi_reasoning_types]
     labels_concat = np.concatenate((labels, labels_ad))
     pred_concat = np.concatenate((pred_ans, pred_ans_ad))
-    # color_ids = np.concatenate((ones, zeros))
-    # color = ['red' if l == 0 else 'green' for l in color_ids]
 
-    X_embedded = TSNE(n_components=2,init="pca").fit_transform(mat_concat)
-    # print(X_embedded.shape)
-    fig, ax = plt.subplots()
-    # plt.scatter(X_embedded[:, 0], X_embedded[:, 1], color=color, alpha=0.6, s=1.1)
-    # handles = plt.scatter(X_embedded[:, 0], X_embedded[:, 1], color=reasoning_color_per_point, alpha=0.6, s=1.1) # reasoning_types
-    for iter, c in enumerate(unique_reasoning_types):
-        X_selected = np.asarray([X_embedded[i, :] for i, r in enumerate(reasoning_types) if r == c and f1_score(pred_concat[i], labels_concat[i]) > 0.6])
-        plt.scatter(X_selected[:, 0], X_selected[:, 1], alpha=0.7, s=2, label=c) # color=color_map[iter],
-    # for i, txt in enumerate(labels_concat):
-    #     print(i)
-    #     if  i > len(labels): # i % 10 < 1:
-    #         ax.annotate(txt, (X_embedded[i, 0] * 0.98, X_embedded[i, 1]), fontsize=6.5)
-    # ax.get_legend_handles_labels
-    # ax.legend(["asad", "asdwewer"])
-    # ax.legend(["aswerwerad", "werasdwewer", "weyiruwyeori123", "msnbdm"])
-    # plt.colorbar()
-    # cmap = cm.get_cmap("viridis", 5)
-    # plt.table(cellText=[[x] for x in reasoning_categories], loc='lower right',
-    #           colWidths=[0.2], rowColours=cmap(np.array(reasoning_categories) - 1),
-    #           rowLabels=['label%d' % x for x in reasoning_categories],
-    #           colLabels=['classes'])
-    ax.legend()
+    # X_embedded = TSNE(n_components=2,init="pca").fit_transform(mat_concat)
+    # fig, ax = plt.subplots()
+    # for iter, c in enumerate(unique_reasoning_types):
+    #     X_selected = np.asarray([X_embedded[i, :] for i, r in enumerate(reasoning_types) if r == c and f1_score(pred_concat[i], labels_concat[i]) > 0.6])
+    #     plt.scatter(X_selected[:, 0], X_selected[:, 1], alpha=0.7, s=2, label=c) # color=color_map[iter],
+    #
+    # ax.legend()
+    # plt.show()
+
+    import seaborn as sns
+
+    db = KMeans(n_clusters=len(unique_reasoning_types), random_state=2).fit(mat_ad)
+    # db = DBSCAN(eps=0.3, min_samples=10).fit(mat_ad)
+    # core_samples_mask = np.zeros_like(db.labels_, dtype=bool)
+    # core_samples_mask[db.core_sample_indices_] = True
+    labelsss = db.labels_
+
+    matt1 = confusion_matrix(bibi_reasoning_type_indices, labelsss)
+
+    # for i in len(matt):
+    #     pass
+
+    # sort the labels based on their
+    # sorted_labels = []
+    # for
+
+    matt = confusion_matrix(bibi_reasoning_type_indices, labelsss)
+    max_values = np.max(matt1, axis=1)
+
+    # matt = diagonalize(matt)
+    plt.figure(figsize=(5.5, 4))
+    sss = sns.heatmap(matt.T, square=True,
+                annot=True,
+                fmt='d', cbar=False,
+                xticklabels=True,
+                yticklabels=True
+                )
+    sss.set_xticklabels(unique_reasoning_types, rotation=45)
+    sss.set_yticklabels(unique_reasoning_types, rotation=0)
+    plt.xlabel('true label')
+    plt.ylabel('predicted label')
     plt.show()
+    print(len(unique_reasoning_types))
 
-    # import csv
-    # with open('qa_nn_tsne_adv.csv', 'w', newline='') as csvfile:
-    #     spamwriter = csv.writer(csvfile)
-    #     for i, row in enumerate(X_embedded):
-    #         row_tmp = [row[0], row[1], labels[i]]
-    #         spamwriter.writerow(row_tmp)
+    ars = metrics.adjusted_rand_score(labelsss, bibi_reasoning_type_indices)
+    print("ars: " + str(ars))
+
+
+def diagonalize(A):
+    # A = np.matrix([[-1, -1, 5], [1, 3, -1], [3, 1, -1]])
+    A = A.astype(int)
+    maxIndices = []
+    for i in range(len(A)):
+        maxIndices.append(np.argmax(A[:,i]))
+    B = A.copy()
+    print(A.shape)
+    print(B.shape)
+
+    indexmaps = list(enumerate(maxIndices))
+    indexmaps.sort(key=lambda x: x[1])
+    sorted_indices = [xx[0] for xx in indexmaps]
+
+    for oldId, newId in enumerate(sorted_indices):
+        # B[:, i] = A[:, i]
+        for j in range(len(A)):
+            B[j,newId] = A[j,oldId]
+
+    return B
 
 
 def project_ner_with_tsne():
@@ -1359,7 +1399,7 @@ def load_babi_questions():
     # return (train_paragraphs, test_paragraphs)
     with open('babi-train.json', 'w', newline='') as f:
         f.write(json.dumps(train_paragraphs))
-    with open('babi-test.json', 'w', newline='') as f:
+    with open('QA_datasets/babi-test.json', 'w', newline='') as f:
         f.write(json.dumps(test_paragraphs))
 
 class ELMoCache():
@@ -1938,12 +1978,11 @@ if __name__ == "__main__":
     # find_eigen_values()
     # project_adversarials_with_tsne()
     # project_remedia_with_tsne()
-    # project_babi_with_tsne()
+
     # filter_squad_questions()
     # printQuestionsForTypingTask()
     # processOutputOfMturk()
     # filter_questions_answer_types()
-    # load_babi_questions()
     # read_ner_data()
     # project_ner_with_tsne()
     # ner_few_shot()
@@ -1955,4 +1994,10 @@ if __name__ == "__main__":
     # shuffle_bidaf_questions()
     # test_srl()
     # test_chunker()
-    shuffle_with_chunker()
+    # shuffle_with_chunker()
+
+
+    ## question annotations experiments
+    # load_babi_questions()
+    project_babi_with_tsne()
+    # diagonalize()
