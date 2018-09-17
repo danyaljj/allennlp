@@ -1,39 +1,22 @@
-#!/usr/bin/env python
 import json
 import logging
 import os
 import sys
 
-
 import numpy
 import numpy as np
 import re
 from sklearn.metrics import confusion_matrix
-# import sklearn
-# import torch
-# from matplotlib import cm
-# import sns as sns
-# import seagborn as sns; sns.set()
 from scipy import linalg
-# from sklearn.linear_model import LogisticRegression
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
 from sklearn.neural_network import MLPClassifier
-# from torch import nn
-
-# import torch.nn.functional as F
-
-# from allennlp.common.util import ensure_list
-# from allennlp.data.dataset_readers import SquadReader
-# from allennlp.models.archival import load_archive, Archive
-# from allennlp.models.archival import load_archive
 from allennlp.models import load_archive
 from allennlp.predictors import Predictor
 from allennlp.data import DatasetReader
 from allennlp.data.dataset import Batch
 from sklearn import cluster, metrics
 import time as time
-import numpy as np
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 from sklearn.cluster import AgglomerativeClustering
@@ -42,7 +25,6 @@ from scipy.cluster.hierarchy import dendrogram, linkage
 
 from evaluate11 import metric_max_over_ground_truths, f1_score, exact_match_score
 import numpy as np
-import matplotlib.pyplot as plt
 from numpy import linalg as LA
 import pickle
 from allennlp.modules.elmo import Elmo, batch_to_ids
@@ -54,6 +36,9 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 def solve(question, paragraph, model, dataset_reader, answers):
+    print(question)
+    print(paragraph)
+    print(answers)
     instance = dataset_reader.text_to_instance(question, paragraph)
     instances = [instance]
     dataset = Batch(instances)
@@ -62,9 +47,8 @@ def solve(question, paragraph, model, dataset_reader, answers):
     model_input = dataset.as_tensor_dict(cuda_device=cuda_device)
     outputs = model(**model_input)
 
-    with open('out22-ner-test.txt', 'a') as ff:
+    with open('ipython/multirc/out22-ner-test.txt', 'a') as ff:
         ff.write(question.replace('\n', ' ') + "\n" + paragraph.replace('\n', ' ') + "\n" + str(json.dumps(answers)) + "\n")
-    # return outputs
 
 def load_model():
     archive = load_archive("https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz")
@@ -90,8 +74,9 @@ def solve_squad_questions():
     model, dataset_reader = load_model()
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/squad-dev-v1.1.json"
     # dataset_file = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner.json"
-    dataset_file = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner_test_full.json"
+    # dataset_file = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner_test_full.json"
     # "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifySample.json"
+    dataset_file = "/Users/daniel/ideaProjects/allennlp/QA_datasets/mutlirc_questions.json"
     # dataset_file = "/Users/daniel/ideaProjects/allennlp/babi-test.json" # "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifySample.json"
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/cachedQuestions/process-bank-train.json"
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/cachedQuestions/remedia-questions.json"
@@ -1386,11 +1371,6 @@ def load_babi_questions():
                             paragraphs.append({"context": sentences.strip(), "qas": qas})
                         sentences = ""
                         qas = []
-                        # break
-
-                    # print(sentences)
-                    # print(qas)
-                    # print("----------")
 
         return {"data": [{"paragraphs": paragraphs}]}
 
@@ -1790,8 +1770,6 @@ def shuffle_bidaf_questions():
             json.dump(dataset_json, outfile)
 
 
-                    # reordering paragraphs and question s
-
 def sample_shuffle():
     str = "Super Bowl 50 was an American football game to determine the champion of the National Football League (NFL) for the 2015 season. The American Football Conference (AFC) champion Denver Broncos defeated the National Football Conference (NFC) champion Carolina Panthers 24\u201310 to earn their third Super Bowl title. The game was played on February 7, 2016, at Levi's Stadium in the San Francisco Bay Area at Santa Clara, California. As this was the 50th Super Bowl, the league emphasized the \"golden anniversary\" with various gold-themed initiatives, as well as temporarily suspending the tradition of naming each Super Bowl game with Roman numerals (under which the game would have been known as \"Super Bowl L\"), so that the logo could prominently feature the Arabic numerals 50."
     print(reorder_string(str, (177, 177 + len("Denver Broncos"))))
@@ -1969,9 +1947,15 @@ def shuffle_with_chunker():
 def shuffle_wiith_srl(sentence, srl_predictor):
     pass
 
+def solve_multirc():
+    # evaluate the questions with bidaf
+
+    text_file = "/Users/daniel/ideaProjects/allennlp/ipython/multirc/out22.txt"
+    tools.solve_squad_questions("/Users/daniel/ideaProjects/allennlp/QA_datasets/mutlirc_questions.json", text_file)
+
 if __name__ == "__main__":
     # solve_sample_question()
-    # solve_squad_questions()
+    solve_squad_questions()
     # sample_clustering()
     # cluster_predictions()
     # example_hierarchical_clustering()
@@ -1996,8 +1980,8 @@ if __name__ == "__main__":
     # test_chunker()
     # shuffle_with_chunker()
 
-
     ## question annotations experiments
     # load_babi_questions()
-    project_babi_with_tsne()
+    # project_babi_with_tsne()
     # diagonalize()
+

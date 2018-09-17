@@ -1,0 +1,100 @@
+0	not present
+1	conf
+0	not present
+1	conf
+1	conf
+0	game
+0	you
+1	conf
+0	him
+1	conf
+1	close
+0	closet
+1	close
+1	conf
+0	viewpoint
+1	close
+1	conf
+0	aperture
+1	conf
+0	eight
+0	not present
+1	conf
+0	me
+1	conf
+0	here
+0	shirt
+0	mary
+0	here
+1	conf
+1	conf
+1	conf
+1	conf
+1	conf
+0	not present
+1	close
+0	not present
+1	conf
+1	conf
+1	conf
+0	job
+1	conf
+0	trees
+1	conf
+0	nurse
+0	ares
+1	conf
+0	van
+0	not present
+1	conf
+1	close
+1	conf
+1	close
+1	conf
+1	conf
+0	not present
+0	here
+1	close
+0	not present
+0	tom
+1	conf
+0	week
+0	not present
+1	conf
+0	knocke
+1	conf
+1	conf
+1	conf
+0	not present
+1	conf
+1	conf
+0	good
+1	conf
+0	nerza
+0	born
+0	not present
+0	hotel
+0	not present
+1	close
+1	close
+0	owen
+1	conf
+1	conf
+0	it
+1	conf
+0	surf
+0	now
+0	macy
+1	conf
+1	conf
+1	close
+1	conf
+1	conf
+1	close
+0	her
+0	her
+1	conf
+0	not present
+1	close
+0	dear
+1	conf

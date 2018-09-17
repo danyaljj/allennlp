@@ -1,0 +1,100 @@
+body	external knowledge, K: coffins are used to contain bodies; if you're searching a coffin you're probably looking for something other than a body
+liam	dialogue, simple speaker tracking
+nice	repeated concept, reference, adjective reference, basic reference in same discourse, paraphrase: nice = cool
+becca	repeated concept, reference, person reference, basic reference in same discourse
+rose	dialogue, simple speaker tracking
+game	repeated concept, reference, noun reference, location reference, basic reference in same discourse, discourse inference rule: ``two teams will enter the X to Y AND whoever does Y first will win and be ported out of the Z'' --> ``X = Z'', paraphrase: retrieve the X = touches the X
+bold	repeated concept, reference, adjective reference, basic reference in same discourse, discourse inference rule: ``X ? i would n't say it was Y'' --> X = Y
+josh	dialogue, conservation of people, single name cue
+mitchell	discourse inference rule: ``she shot a glance at X and then turned back to Y'' --> ``X != Y'', conservation of people, reference, person reference
+rosalind	dialogue, simple speaker tracking, conservation of people
+nunez	repeated concept, reference, person reference, discourse inference rule: following are consistent activities for one individual: mingling; chasing down some leads X got out of Y; keeping an eye on Z; looking out for A; spot a person in disguise
+bathroom	repeated concept, reference, noun reference, basic reference in same discourse, semantic trigger: ``huge X --> Y had to chuckle to herself at the size of the X''
+technology	repeated concept, reference, noun reference, basic reference in same discourse, semantic trigger: ``where is the X? --> we got plenty of X''
+masters	hard or different or uncategorizable
+society	repeated concept, reference, noun reference, semantic trigger: ``members of the X --> do you still belong to the X?''
+ellis	dialogue, simple speaker tracking, conservation of people
+color	repeated concept, reference, noun reference, basic reference in same discourse
+floor	hard or different or uncategorizable
+thief	repeated concept, reference, person reference, basic reference in same discourse, semantic trigger: ``it was gone --> thief'', external knowledge, K: thieves steal things
+setrakus	repeated concept, reference, person reference, pronoun coreference, semantic trigger: ``X poses threat --> Y doesn't think we're ready to face X''
+visitors	repeated concept, reference, noun reference, semantic trigger: ``they are trying to break X; make X feel isolated --> Y said for some duration there would n't be any (visits)''
+michael	conservation of people, reference, person reference
+julia	discourse inference rule: ``X glanced back at Y and then returned her eyes to Z'' --> Y != Z, conservation of people, reference, person reference, single name cue
+aliens	repeated concept, reference, noun reference, basic reference in same discourse, repetition+elaboration
+dragons	repeated concept, semantic trigger: ``the X are a nice touch --> Y ought to find a way to work in X''
+clothes	external knowledge, K: you can look down at your clothes, repeated concept, reference, noun reference
+jackson	semantic trigger: ``X turned immediately to listen to Y's message --> Z stopped his activities and turned to face Y'', reference, person reference
+negotiating	coordination, semantic trigger: ``we're not X --> i didn't know we were X'', repeated concept
+spider	coreference, repeated concept, reference, noun reference, external knowledge, K: boys can stab and dodge and spiders can't stab
+jules	dialogue, simple speaker tracking, conservation of people, single name cue
+brace	dialogue, conservation of people, single name cue
+victoria	dialogue, conservation of people, complex tracking speakers
+cat	dialogue, simple speaker tracking, conservation of people
+dunes	coreference, hard or different or uncategorizable, external knowledge, K: if someone would go no farther it means they will turn back; know what a desert and sand dunes are, semantic trigger: ``Y would go no farther; Z could see nothing beyond X --> Y had already disappeared over the other side of the X'', semantic trigger: ``Y could see nothing beyond X --> Z can disappear by being on the other side of X'', reference, noun reference
+max	discourse inference rule: ``X frowned at Y -COMMA- then at Z'' --> Y != Z, conservation of people, person reference, reference
+forever	repeated concept, reference, noun reference, discourse focus
+teachers	coreference, dialogue, discourse inference rule: ``we Xs Y'' said a Z --> X = Z, reference, repeated concept, person reference
+tombstone	coreference, reference, noun reference, repeated concept, paraphrase: ``X caught the name on the closest Y'' = ``X could n't help reading the words on the Y''
+gus	dialogue, reference, person reference, conservation of people, discourse focus, semantic trigger: ``X turned to Y -COMMA- `Z' '' --> ``all eyes turned to Y''
+rent	repeated concept, reference, noun reference, semantic trigger: ``i need to pay you back for X'' --> ``i'm not worried about X''
+bull	dialogue, simple speaker tracking, conservation of people, single name cue
+snow	repeated concept, reference, noun reference, external knowledge, K: snow can be frustrating to deal with, K: bernie kosar is a famous athlete which indicates the clearing was to play a sport, K: playing a sport in snow is difficult, coreference
+tanner	coreference, conservation of people, discourse inference rule: ``X looked at Y's extended hand but instead of taking it , turned his gaze on Z'' --> Y != Z
+mask	repeated concept, reference, noun reference, external knowledge, K: masks can hinder ability to speak
+athena	coreference, external knowledge, K: forgiveness can end the cycle of vengeance, discourse inference rule: ``X wanted to end the cycle of vengeance'' --> ``Y said -COMMA- ` i forgive you as well -COMMA- X ' '', conservation of people, reference, person reference
+kizira	conservation of people, reference, person reference
+ball	repeated concept, reference, noun reference, external knowledge, K: when things explode high-pitched noises emanate from them, semantic trigger: ``X exploded'' --> ``high pitched noise that emanated from the X''
+tessa	collocation, hard or different or uncategorizable
+falcon	repeated concept, reference, noun reference, external knowledge, K: travel vehicles can take off, semantic trigger: ``get the X ready to take off'' --> ``plan is to take the X''
+luca	dialogue, simple speaker tracking, conservation of people
+bonmot	dialogue, simple speaker tracking, conservation of people, single name cue
+commissary	coreference, repeated concept, reference, noun reference, location reference, paraphrase: ``X took Y to pick up W from the Z'' AND ``X bribed Y'' --> ``X had to bribe Y to go to the Z'' 
+kate	conservation of people, reference, person reference, discourse inference rule: ``X faded into the background as Y walked over to Z'' --> X != Z
+elders	reference, person reference, repeated concept, semantic trigger: `` `we have to go see the X' '' --> ``to make the journey to the X''
+otherwise	external knowledge, K: people don't want to believe bad news and don't want to communicate it to others, semantic trigger: `` `there must be some mistake' '' --> `` `i'd give anything to tell you otherwise' ''
+conte	dialogue, simple speaker tracking, conservation of people, external knowledge, K: ms. precedes a last name and is used for females
+eleanor	hard or different or uncategorizable 
+rich	external knowledge, K: rich suitors more appealing, K: rich suitors seek attractive mates
+nathaniel	coreference, external knowledge, K: one person healing another and a person says ``great job'' -- it is more likely to be the healer who says it
+bridge	dialogue, repeated concept, reference, noun reference, location reference, basic reference in same discourse
+poem	dialogue, repeated concept, reference, noun reference, external knowledge, K: for an X reading competition you need to choose an X
+frame	coreference, external knowledge, K: glass door without glass is a frame
+embarrassed	dialogue, repeated concept
+clarity	dialogue, simple speaker tracking, conservation of people, discourse
+rabbit	external knowledge, K: people shoot arrows at animals like rabbits
+cat	repeated concept
+jase	conservation of people, discourse inference rule: ``turn head away from X and focus on Y'' --> X != Y, reference, person reference
+fly	dialogue, repeated concept, external knowledge, K: pilots fly but they can't fly everyday
+axe	reference, noun reference, repeated concept, basic reference in same discourse
+jason	reference, person reference, single name cue, repeated concept
+diana	coreference, external knowledge, K: Princess Diana had blue eyes
+gandy	coreference, external knowledge, K: you should thank me --> you think what i did was wrong; using airquotes is a way to reinterpret a situation
+arii	dialogue, simple speaker tracking, conservation of people
+clever	repeated concept, coreference, dialogue, external knowledge, K: satisfy animal urges --> cleverness is not required
+shift	repeated concept, external knowledge, K: end of shift indicates that you are free or at least it's something that has an end and/or happens at night
+magazine	reference, noun reference, repeated concept, basic reference in same discourse
+laugh	coreference, repeated concept, reference, event reference, noun reference
+organization	repeated concept, reference, noun reference, basic reference in same discourse, paraphrase: ``infiltrated the X and assumed control'' = ``he 'd taken control of the X''
+garcia	dialogue, simple speaker tracking, conservation of people
+terry	coreference, dialogue, discourse inference rule: ``W gave X a Z and turned back to Y'' --> X != Y, conservation of people, reference, person reference
+georgia	dialogue, simple speaker tracking, conservation of people
+kira	dialogue, repeated concept, basic reference in same discourse, reference, person reference, semantic trigger: ``if it has to do with X'' --> ``it doesn't have to do with X''
+wine	repeated concept, reference, noun reference, external knowledge, K: people have alcoholic drinks of choice and may not know much about others, K: people know about what their family members do
+kozz	dialogue, simple speaker tracking, conservation of people
+lucky	repeated concept, reference, adjective reference, basic reference in same discourse
+lose	coreference, repeated concept, reference, verb reference
+nicole	discourse inference rule: ``W greeted X with a Z before turning to Y'' --> X != Y, conservation of people, coreference, reference, person reference
+fort	dialogue, reference, noun reference, location reference, semantic trigger: ``we have n't been to the X in a while .'' --> ``you want to wander off to the X''
+sheila	dialogue, simple speaker tracking, conservation of people, single name cue
+ben	dialogue, simple speaker tracking, conservation of people, single name cue
+iona	discourse inference rule: ``X would explode if X could hear this conversation . but that was why Y was having it with Z -COMMA- not W'' --> W = X, coreference, reference, person reference
+dwarfs	reference, person reference, repeated concept, basic reference in same discourse, semantic trigger: ``there's the X'' --> ``what about the X?''
+adam	discourse inference rule: ``X did W . X turned to Y . `Z' said Q'' --> Q = X, coreference, conservation of people, reference, person reference
+one	dialogue, reference, noun reference, repeated concept, basic reference in same discourse, semantic trigger: ``won't i become an X'' --> ``yes you have already taken on the status of X''
+nicole	coreference, conservation of people, discourse inference rule: ``X left Y and went in search of Z'' --> Y != Z, reference, person reference
+blaze	dialogue, tracking speakers, conservation of people
+train	hard or different or uncategorizable
+paul	dialogue, simple speaker tracking, conservation of people
+winston	conservation of people, reference, person reference, basic reference in same discourse, external knowledge, K: saying goodnight to someone then physically moving means that the person is no longer present
+patterson	dialogue, simple speaker tracking, conservation of people

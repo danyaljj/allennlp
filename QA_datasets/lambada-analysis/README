@@ -1,0 +1,65 @@
+This directory contains files from our manual analysis of the LAMBADA task. 
+
+Files included:
+
+contexts.txt - contexts (without the answer) for 100 randomly selected LAMBADA dev instances
+answers.txt - true answers for the 100 contexts
+guesses.human.txt - human guesses for the 100 contexts in contexts.txt
+correct.human.txt - integers indicating which guesses in guesses.human.txt were correct (1) or incorrect (0), one for each line in contexts.txt & answers.txt
+correct.gafeatures.txt - tsv file, first field contains 0/1 values indicating correctness of GA Reader + Features (best-performing result from paper), 
+second field contains:
+predicted answer, if the reader was incorrect and the answer was in the context,
+``not present'' if the reader was incorrect and the answer was not in the context,
+``conf'' if the reader was correct and confident, or
+``close'' if the reader was correct but not very confident.
+analysis.txt - human analysis of the instances; first field shows human guess, second field is a comma-delimited set of labels
+analysis.simplified.txt - reduced label set used for calculating stats in table in paper; rare or partially-overlapping categories were excluded
+answer-in-context.txt - 0/1 indicating whether the correct answer was in the context
+
+To compute the number of instances that the human answered correctly, run:
+cat correct.human.txt | ./mean.pl
+total = 100
+sum = 86
+mean = 0.86
+
+To compute accuracy of instances when the answer was in the context, run:
+paste answer-in-context.txt correct.human.txt | grep '^1' | cut -f 2 | ./mean.pl
+total = 87
+sum = 79
+mean = 0.908045977011494
+
+Replace "human" with "gafeatures" to compute the analogous accuracy for the neural reader.
+
+To compute the accuracy on instances with a particular label, use commands like the following:
+paste correct.human.txt analysis.simplified.txt | grep 'single name cue' | cut -f 1 | ./mean.pl
+total = 9
+sum = 9
+mean = 1
+paste correct.gafeatures.txt analysis.simplified.txt | grep 'single name cue' | cut -f 1 | ./mean.pl
+total = 9
+sum = 8
+mean = 0.888888888888889
+
+Others:
+paste correct.human.txt analysis.simplified.txt | grep 'simple speaker tracking' | cut -f 1 | ./mean.pl
+paste correct.gafeatures.txt analysis.simplified.txt | grep 'simple speaker tracking' | cut -f 1 | ./mean.pl
+paste correct.human.txt analysis.simplified.txt | grep 'basic reference in same discourse' | cut -f 1 | ./mean.pl
+paste correct.gafeatures.txt analysis.simplified.txt | grep 'basic reference in same discourse' | cut -f 1 | ./mean.pl
+paste correct.human.txt analysis.simplified.txt | grep 'discourse inference rule' | cut -f 1 | ./mean.pl
+paste correct.gafeatures.txt analysis.simplified.txt | grep 'discourse inference rule' | cut -f 1 | ./mean.pl
+paste correct.human.txt analysis.simplified.txt | grep 'semantic trigger' | cut -f 1 | ./mean.pl
+paste correct.gafeatures.txt  analysis.simplified.txt | grep 'semantic trigger' | cut -f 1 | ./mean.pl
+paste correct.human.txt analysis.simplified.txt | grep 'coreference' | cut -f 1 | ./mean.pl
+paste correct.gafeatures.txt  analysis.simplified.txt | grep 'coreference' | cut -f 1 | ./mean.pl
+paste correct.human.txt analysis.simplified.txt | grep 'external knowledge' | cut -f 1 | ./mean.pl
+paste correct.gafeatures.txt  analysis.simplified.txt | grep 'external knowledge' | cut -f 1 | ./mean.pl
+
+There was one category in analysis.simplified.txt that was not reported on in Table 2: ``hard or different or uncategorizable''. We were considering including it but since it is only used for 6 instances the statistics for it are not very reliable. Nonetheless we left it in analysis.simplified.txt because it is a useful explanation for 5 of those instances that otherwise do not have any labels. 
+
+Note: The accuracy of the GA Reader + Features on all instances in Table 2 is shown as 55% -- this is a typo. It should be 54% and will be fixed in the next arXiv revision. 
+
+Any questions/comments, please contact:
+Kevin Gimpel
+kgimpel@ttic.edu
+12/20/16
+

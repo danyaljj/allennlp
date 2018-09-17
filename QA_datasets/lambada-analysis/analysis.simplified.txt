@@ -1,0 +1,100 @@
+body	external knowledge
+liam	simple speaker tracking
+nice	basic reference in same discourse
+becca	basic reference in same discourse
+rose	simple speaker tracking
+game	discourse inference rule, basic reference in same discourse
+bold	discourse inference rule, basic reference in same discourse
+josh	single name cue
+mitchell	discourse inference rule
+rosalind	simple speaker tracking
+nunez	discourse inference rule
+bathroom	semantic trigger, basic reference in same discourse
+technology	semantic trigger, basic reference in same discourse
+masters	hard or different or uncategorizable
+society	semantic trigger
+ellis	simple speaker tracking
+color	basic reference in same discourse
+floor	hard or different or uncategorizable
+thief	semantic trigger, external knowledge, basic reference in same discourse
+setrakus	coreference, semantic trigger
+visitors	semantic trigger
+michael	
+julia	discourse inference rule, single name cue
+aliens	basic reference in same discourse
+dragons	semantic trigger
+clothes	external knowledge
+jackson	semantic trigger
+negotiating	semantic trigger
+spider	coreference, external knowledge
+jules	simple speaker tracking, single name cue
+brace	single name cue
+victoria	
+cat	simple speaker tracking
+dunes	coreference, hard or different or uncategorizable, external knowledge, semantic trigger
+max	discourse inference rule
+forever	
+teachers	coreference, discourse inference rule
+tombstone	coreference
+gus	semantic trigger
+rent	semantic trigger
+bull	simple speaker tracking, single name cue
+snow	external knowledge, coreference
+tanner	coreference, discourse inference rule
+mask	external knowledge
+athena	coreference, external knowledge, discourse inference rule
+kizira	
+ball	external knowledge, semantic trigger
+tessa	hard or different or uncategorizable
+falcon	external knowledge, semantic trigger
+luca	simple speaker tracking
+bonmot	simple speaker tracking, single name cue
+commissary	coreference
+kate	discourse inference rule
+elders	semantic trigger
+otherwise	external knowledge, semantic trigger
+conte	simple speaker tracking, external knowledge
+eleanor	hard or different or uncategorizable
+rich	external knowledge
+nathaniel	coreference, external knowledge
+bridge	basic reference in same discourse
+poem	external knowledge
+frame	coreference, external knowledge
+embarrassed	
+clarity	simple speaker tracking
+rabbit	external knowledge
+cat	
+jase	discourse inference rule
+fly	external knowledge
+axe	basic reference in same discourse
+jason	single name cue
+diana	coreference, external knowledge
+gandy	coreference, external knowledge
+arii	simple speaker tracking 
+clever	coreference, external knowledge
+shift	external knowledge
+magazine	basic reference in same discourse
+laugh	coreference
+organization	basic reference in same discourse
+garcia	simple speaker tracking
+terry	coreference, discourse inference rule
+georgia	simple speaker tracking 
+kira	semantic trigger, basic reference in same discourse
+wine	external knowledge
+kozz	simple speaker tracking
+lucky	basic reference in same discourse
+lose	coreference
+nicole	discourse inference rule, coreference
+fort	semantic trigger
+sheila	simple speaker tracking, single name cue
+ben	simple speaker tracking, single name cue
+iona	discourse inference rule, coreference
+dwarfs	semantic trigger, basic reference in same discourse
+adam	discourse inference rule, coreference
+one	semantic trigger, basic reference in same discourse
+nicole	coreference, discourse inference rule
+blaze	
+train	hard or different or uncategorizable
+paul	simple speaker tracking
+winston	external knowledge, basic reference in same discourse
+patterson	simple speaker tracking
