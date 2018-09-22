@@ -11,7 +11,6 @@ from scipy import linalg
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import KMeans
 from sklearn.neural_network import MLPClassifier
-from allennlp.models import load_archive
 from allennlp.predictors import Predictor
 from allennlp.data import DatasetReader
 from allennlp.data.dataset import Batch
@@ -47,10 +46,11 @@ def solve(question, paragraph, model, dataset_reader, answers):
     model_input = dataset.as_tensor_dict(cuda_device=cuda_device)
     outputs = model(**model_input)
 
-    with open('ipython/multirc/out22-ner-test.txt', 'a') as ff:
+    with open('ipython/mctest/out22-ner-test.txt', 'a') as ff:
         ff.write(question.replace('\n', ' ') + "\n" + paragraph.replace('\n', ' ') + "\n" + str(json.dumps(answers)) + "\n")
 
 def load_model():
+    from allennlp.models import load_archive
     archive = load_archive("https://s3-us-west-2.amazonaws.com/allennlp/models/bidaf-model-2017.09.15-charpad.tar.gz")
     # archive = load_archive("finetune_factor_001_epoch_2/model.tar.gz")
     config = archive.config.duplicate()
@@ -76,7 +76,8 @@ def solve_squad_questions():
     # dataset_file = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner.json"
     # dataset_file = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner_test_full.json"
     # "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifySample.json"
-    dataset_file = "/Users/daniel/ideaProjects/allennlp/QA_datasets/mutlirc_questions.json"
+    dataset_file = "/Users/daniel/ideaProjects/allennlp/QA_datasets/mctest.json"
+    # dataset_file = "/Users/daniel/ideaProjects/allennlp/QA_datasets/mutlirc_questions.json"
     # dataset_file = "/Users/daniel/ideaProjects/allennlp/babi-test.json" # "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifySample.json"
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/cachedQuestions/process-bank-train.json"
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/cachedQuestions/remedia-questions.json"
@@ -1777,6 +1778,7 @@ def sample_shuffle():
 
 
 def load_srl_model():
+    from allennlp.models import load_archive
     archive = load_archive("https://s3-us-west-2.amazonaws.com/allennlp/models/srl-model-2018.05.25.tar.gz")
     # config = archive.config.duplicate()
     model = archive.model
@@ -1953,6 +1955,57 @@ def solve_multirc():
     text_file = "/Users/daniel/ideaProjects/allennlp/ipython/multirc/out22.txt"
     tools.solve_squad_questions("/Users/daniel/ideaProjects/allennlp/QA_datasets/mutlirc_questions.json", text_file)
 
+def convert_mctest_to_json():
+    directory = "/Users/daniel/ideaProjects/allennlp/QA_datasets/mctest/"
+    paragraphs = []
+    def read_mctest_file(file):
+        with open(directory + file) as f:
+            content = f.read().splitlines()
+            for line in content:
+                qas = []
+                rows = line.split("\t")
+                id = rows[0]
+                context = rows[2].replace("\\newline", "")
+                q1 = rows[3]
+                q2 = rows[8]
+                q3 = rows[13]
+                q4 = rows[18]
+                ans1str = rows[4:8]
+                ans2str = rows[9:13]
+                ans3str = rows[14:18]
+                ans4str = rows[18:22]
+
+                def add_question(ans_str, q, i):
+                    ans1 = []
+                    for s in ans_str:
+                        idx = 0
+                        if s in content:
+                            idx = context.index(s)
+                        ans1.append({"answer_start": idx, "text": s})
+
+                    q = q.replace("multiple: ", "")
+                    q = q.replace("one: ", "")
+                    question = {"answers": ans1, "question": q.strip(), "id": id + str(i)}
+                    qas.append(question)
+
+                paragraphs.append({"context": context.strip(), "qas": qas})
+
+                add_question(ans1str, q1, 1)
+                add_question(ans2str, q2, 2)
+                add_question(ans3str, q3, 3)
+                add_question(ans4str, q4, 4)
+
+    read_mctest_file("mc160.dev.tsv")
+    read_mctest_file("mc160.test.tsv")
+    read_mctest_file("mc160.train.tsv")
+    read_mctest_file("mc500.dev.tsv")
+    read_mctest_file("mc500.test.tsv")
+    read_mctest_file("mc500.train.tsv")
+
+    questions_json = {"data": [{"paragraphs": paragraphs}]}
+    with open('/Users/daniel/ideaProjects/allennlp/QA_datasets/mctest.json', 'w', newline='') as f:
+        f.write(json.dumps(questions_json))
+
 if __name__ == "__main__":
     # solve_sample_question()
     solve_squad_questions()
@@ -1984,4 +2037,6 @@ if __name__ == "__main__":
     # load_babi_questions()
     # project_babi_with_tsne()
     # diagonalize()
+
+    # convert_mctest_to_json()
 
