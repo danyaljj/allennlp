@@ -1985,7 +1985,7 @@ def convert_mctest_to_json():
 
                     q = q.replace("multiple: ", "")
                     q = q.replace("one: ", "")
-                    question = {"answers": ans1, "question": q.strip(), "id": id + str(i)}
+                    question = {"answers": ans1, "question": q.strip(), "id": id + "-" + str(i)}
                     qas.append(question)
 
                 paragraphs.append({"context": context.strip(), "qas": qas})
@@ -2038,5 +2038,5 @@ if __name__ == "__main__":
     # project_babi_with_tsne()
     # diagonalize()
 
-    # convert_mctest_to_json()
+    convert_mctest_to_json()
 

@@ -18,6 +18,7 @@ class Prerequisit_Skills():
         11: "Schematic clauses",
         12: "Punctuation",
         13: "No skill",
+        14: "Nonsense",
     }
 
     folder = "/Users/daniel/ideaProjects/allennlp/QA_datasets/prerequisit_data/"
@@ -37,14 +38,13 @@ class Prerequisit_Skills():
             for a in dataset_json:
                 original_id = a["original_id"]
                 annotations = a["annotations"]
-                new_annotations = []
-                for aa in annotations:
-                    print(aa["skills"])
+                # new_annotations = []
+                for i, aa in enumerate(annotations):
+                    # print(aa["skills"])
                     skills = [self.skills_map[x] for x in aa["skills"]]
-                    new_annotations.append({"skills": skills, "nonsense": aa["nonsense"]})
-                all_anno[original_id] = new_annotations
+                    all_anno[original_id + "-" + str(i + 1)] = skills
 
         return all_anno
 
 preq = Prerequisit_Skills()
-preq.read_prereq_file("squad.json")
+print(len(preq.read_prereq_file("mctest.json")))
