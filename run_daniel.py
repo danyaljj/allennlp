@@ -45,8 +45,7 @@ def solve(question, paragraph, model, dataset_reader, answers):
     cuda_device = model._get_prediction_device()
     model_input = dataset.as_tensor_dict(cuda_device=cuda_device)
     outputs = model(**model_input)
-
-    with open('ipython/mctest/out22-ner-test.txt', 'a') as ff:
+    with open('ipython/squad_dev_with_prereq/out22-ner-test.txt', 'a') as ff:
         ff.write(question.replace('\n', ' ') + "\n" + paragraph.replace('\n', ' ') + "\n" + str(json.dumps(answers)) + "\n")
 
 def load_model():
@@ -73,10 +72,11 @@ def solve_sample_question():
 def solve_squad_questions():
     model, dataset_reader = load_model()
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/squad-dev-v1.1.json"
+    dataset_file = "/Users/daniel/ideaProjects/allennlp/QA_datasets/squad-dev-v1.1-with-prereq-annotations.json"
     # dataset_file = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner.json"
     # dataset_file = "/Users/daniel/ideaProjects/allennlp/ontonotes_questions_ner_test_full.json"
     # "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifySample.json"
-    dataset_file = "/Users/daniel/ideaProjects/allennlp/QA_datasets/mctest.json"
+    # dataset_file = "/Users/daniel/ideaProjects/allennlp/QA_datasets/mctest.json"
     # dataset_file = "/Users/daniel/ideaProjects/allennlp/QA_datasets/mutlirc_questions.json"
     # dataset_file = "/Users/daniel/ideaProjects/allennlp/babi-test.json" # "/Users/daniel/ideaProjects/allennlp/sample1k-HCVerifySample.json"
     # dataset_file = "/Users/daniel/ideaProjects/linear-classifier/other/questionSets/cachedQuestions/process-bank-train.json"
@@ -2038,5 +2038,5 @@ if __name__ == "__main__":
     # project_babi_with_tsne()
     # diagonalize()
 
-    convert_mctest_to_json()
+    # convert_mctest_to_json()
 

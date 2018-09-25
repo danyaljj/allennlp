@@ -300,7 +300,7 @@ class BidirectionalAttentionFlow(Model):
             # print("span_end_logits: " + str(len(span_end_logits.data.numpy().flatten())))
 
             concat = span_start_input_selected + span_end_input_selected
-            with open('ipython/mctest/out33-ner-test.txt', 'a') as f:
+            with open('ipython/squad_dev_with_prereq/out33-ner-test.txt', 'a') as f:
                 f.write(json.dumps(concat, cls=NumpyEncoder) + "\n")
                 f.write(best_span_string.replace('\n', ' ') + "\n")
 
