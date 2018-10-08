@@ -1,0 +1,57 @@
+#!/usr/bin/python
+
+def convert(fname):
+    with open(fname) as f:
+        lines = f.readlines()
+
+    out = open(fname + ".conll", "w")
+    i = 0
+    prevlabel = "O"
+    for line in lines:
+        if len(line.strip()) == 0:
+            i = 0
+            out.write("\n")
+            continue
+        
+        sline = line.split()
+
+        # English: 1
+        postag = sline[1]
+        word = sline[0]
+        
+        label = sline[-1].split("-")
+        if len(label) == 2:
+            prefix,tag = label
+            if prefix == "B":
+                # should stay that way
+                label = sline[-1]
+
+            else:
+                # prefix is I
+                if prevlabel == "O":
+                    prefix = "B"
+                elif prevlabel.split("-")[1] != tag:
+                    prefix = "B"
+                    
+                label = prefix + "-" + tag
+        else:
+            label = "O"
+        
+        prevlabel = label
+        out.write("\t".join([label, "0", str(i), "x", postag, word, "x", "x", "0\n"]))
+        
+        i += 1
+    out.close()
+    
+    print "Wrote to: ", fname + ".conll"
+    
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Convert a file to conll format.")
+
+    parser.add_argument("file",help="input file to be converted.")
+
+    args = parser.parse_args()
+    
+    convert(args.file)

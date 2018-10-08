@@ -1,0 +1,30 @@
+#!/usr/bin/python
+
+import sys
+
+fname = sys.argv[1]
+outpath = sys.argv[2]
+
+with open(fname) as f:
+    lines = f.readlines()
+
+docs = {}
+doclines = []
+docid = 1
+
+ln = 200
+
+for line in lines:
+    if len(doclines) > ln and len(line.strip()) == 0:
+        docs[docid] = doclines
+        docid += 1
+        doclines = []
+    else:
+        doclines.append(line)
+
+
+for docid in docs:
+    lines = docs[docid]
+    with open("{}/{:03}.txt".format(outpath, docid),"w") as out:
+        for line in lines:
+            out.write(line)
