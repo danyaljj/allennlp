@@ -1,5 +1,7 @@
 import json
 
+import logging
+
 from allennlp.data.tokenizers import WordTokenizer
 from diskcache import Cache
 import json
@@ -13,6 +15,9 @@ class NearestNeighborQuestionExtractor():
     # uses lucene to extract nearest neghbor instances
     from elasticsearch import Elasticsearch
     es = Elasticsearch(['http://bronte.cs.illinois.edu'], port=8080)
+
+    for _ in ("boto", "elasticsearch", "urllib3"):
+        logging.getLogger(_).setLevel(logging.CRITICAL)
 
     tokenizer = WordTokenizer()
 

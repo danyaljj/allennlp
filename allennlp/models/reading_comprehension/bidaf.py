@@ -68,6 +68,7 @@ class BidirectionalAttentionFlow(Model):
                  num_highway_layers: int,
                  phrase_layer: Seq2SeqEncoder,
                  similarity_function: SimilarityFunction,
+                 similarity_function_relevant: SimilarityFunction,
                  modeling_layer: Seq2SeqEncoder,
                  span_end_encoder: Seq2SeqEncoder,
                  dropout: float = 0.2,
@@ -81,7 +82,7 @@ class BidirectionalAttentionFlow(Model):
                                                       num_highway_layers))
         self._phrase_layer = phrase_layer
         self._matrix_attention = LegacyMatrixAttention(similarity_function)
-        # self._matrix_attention_relevant = LegacyMatrixAttention(similarity_function)
+        self._matrix_attention_relevant = LegacyMatrixAttention(similarity_function_relevant)
         self._modeling_layer = modeling_layer
         self._span_end_encoder = span_end_encoder
 
@@ -257,25 +258,26 @@ class BidirectionalAttentionFlow(Model):
         start_repr = relevant_question_start_representations[:, relevant_start_indices_array, :]
         end_repr = relevant_question_start_representations[:, relevant_end_indices_array, :]
 
-        span_repr = torch.cat([start_repr, end_repr], dim=-1)
+        span_repr = torch.cat([start_repr, end_repr], dim=1)
 
         # Shape: (batch_size, passage_length, encoding_dim * 4)
-        final_merged_passage = torch.cat([encoded_passage,
+        final_merged_passage_before_relevant = torch.cat([encoded_passage,
                                           passage_question_vectors,
                                           encoded_passage * passage_question_vectors,
                                           encoded_passage * tiled_question_passage_vector],
                                          dim=-1)
 
 
-        # passage_question_similarity_with_relevants = self._matrix_attention(final_merged_passage, span_repr)
-        # passage_question_attention_with_relevants = util.masked_softmax(passage_question_similarity_with_relevants, rel)
-        # passage_question_vectors_with_relevants = util.weighted_sum(span_repr, passage_question_attention_with_relevants)
-        # masked_similarity_with_relevants = util.replace_masked_values(passage_question_similarity_with_relevants, question_mask.unsqueeze(1), -1e7)
-        # question_passage_similarity = masked_similarity_with_relevants.max(dim=-1)[0].squeeze(-1)
-        # question_passage_attention = util.masked_softmax(question_passage_similarity, passage_mask)
-        # question_passage_vector = util.weighted_sum(encoded_passage, question_passage_attention)
-        # tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size, passage_length, encoding_dim)
+        passage_question_similarity_with_relevants = self._matrix_attention(final_merged_passage_before_relevant, span_repr)
 
+        passage_question_attention_with_relevants = util.masked_softmax(passage_question_similarity_with_relevants, None)
+
+        final_merged_passage = torch.cat([encoded_passage,
+                                          passage_question_vectors,
+                                          encoded_passage * passage_question_vectors,
+                                          encoded_passage * tiled_question_passage_vector,
+                                          passage_question_similarity_with_relevants,
+                                          passage_question_attention_with_relevants], dim=-1)
 
         modeled_passage = self._dropout(self._modeling_layer(final_merged_passage, passage_lstm_mask))
         modeling_dim = modeled_passage.size(-1)
