@@ -106,6 +106,7 @@ class SquadReader(DatasetReader):
 
         relevant_questions = self._nearest_neighbor_reader.retrieve_best_questions(question_text, paragraph_title, 5)
 
+        # for now, only use the first question
         relevant_question_tokens = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[0][2])]
         relevant_passage_tokens = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[0][3])]
         relevant_span_start = relevant_questions[0][4]

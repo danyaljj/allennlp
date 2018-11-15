@@ -230,7 +230,6 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
     fields['metadata'] = MetadataField(metadata)
     return Instance(fields)
 
-
 def make_reading_comprehension_instance_quac(question_list_tokens: List[List[Token]],
                                              passage_tokens: List[Token],
                                              token_indexers: Dict[str, TokenIndexer],
