@@ -104,7 +104,14 @@ class SquadReader(DatasetReader):
                 logger.debug("Answer: %s", passage_text[char_span_start:char_span_end])
             token_spans.append((span_start, span_end))
 
-        relevant_questions = self._nearest_neighbor_reader.retrieve_best_questions(question_text, paragraph_title, 5)
+        relevant_questions = self._nearest_neighbor_reader.retrieve_best_questions(question_text.strip(), paragraph_title, 5)
+
+
+        if len(relevant_questions) == 0:
+            print("question_text:", question_text)
+
+
+        assert len(relevant_questions) > 0, "not enough questions were found"
 
         # for now, only use the first question
         relevant_question_tokens = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[0][2])]

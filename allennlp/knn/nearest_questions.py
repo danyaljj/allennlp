@@ -21,17 +21,20 @@ class NearestNeighborQuestionExtractor():
 
     tokenizer = WordTokenizer()
 
-    def retrieve_best_questions(self, question, title: str = "", topK: int = 5):
+    def retrieve_best_questions(self, question, title: str = "", topK: int = 50):
         key = str.encode(question + title + str(topK))
         if key in self.cache:
             output_bytes = self.cache[key]
             return json.loads(output_bytes.decode())
         else:
+            # print("question: " + question)
+            # print("title: " + title)
             output = self.retrieve_best_questions_from_elastic_search(question, title, topK)
+            # print("output len: " + str(len(output)))
             self.cache.add(key, str.encode(json.dumps(output)))
             return output
 
-    def retrieve_best_questions_from_elastic_search(self, question, title, topK: int = 5):
+    def retrieve_best_questions_from_elastic_search(self, question, title, topK):
         tokens = [t.text.lower() for t in self.tokenizer.tokenize(question)]
 
         # filter the wh-terms in the question
@@ -56,7 +59,7 @@ class NearestNeighborQuestionExtractor():
             else:
                 return score # lucene score
 
-        res = self.es.search(index="squad_questions", doc_type="text", body={"query": {"match": {"question": question}}}, size=50)
+        res = self.es.search(index="squad_questions", doc_type="text", body={"query": {"match": {"question": question}}}, size=200)
         # print("%d documents found:" % res['hits']['total'])
         output = []
         for doc in res['hits']['hits']:
@@ -71,6 +74,8 @@ class NearestNeighborQuestionExtractor():
             # print(doc['_source']["question"], r)
             if question_title != title:
                 output.append((question_text, r, question_tokens, passage_tokens, span_start, span_end))
+
+        # print("output documents: " + str(len(output)))
 
         if len(question_terms) > 0:
             # print("rerank the items")
@@ -113,6 +118,8 @@ def createQuestionJson():
 
 if __name__ == '__main__':
     extractor = NearestNeighborQuestionExtractor()
-    extractor.retrieve_best_questions("When did the Scholastic Magazine of Notre dame begin publishing?", "", 5)
+    out = extractor.retrieve_best_questions("What is the Grotto at Notre Dame?", "", 5)
+    print(len(out))
+    print(out)
     # createQuestionJson()
 
