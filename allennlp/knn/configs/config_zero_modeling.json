@@ -70,6 +70,12 @@
             "tensor_1_dim": 800,
             "tensor_2_dim": 800
         },
+        "similarity_function_relevant_span": {
+            "type": "linear",
+            "combination": "x,y,x*y",
+            "tensor_1_dim": 200,
+            "tensor_2_dim": 200
+        },
         "modeling_layer": {
             "type": "pass_through",
             "input_dim": 800
