@@ -118,8 +118,10 @@ def createQuestionJson():
 
 if __name__ == '__main__':
     extractor = NearestNeighborQuestionExtractor()
-    out = extractor.retrieve_best_questions("What is the Grotto at Notre Dame?", "", 5)
+    out = extractor.retrieve_best_questions("Who is the publisher of the Doctor Who Adventures magazine? ", "", 30)
     print(len(out))
-    print(out)
+    # print(out)
+    for x in out:
+        print(x)
     # createQuestionJson()
 

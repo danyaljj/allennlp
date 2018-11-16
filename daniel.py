@@ -131,7 +131,7 @@ def train():
                                                Trainer.list_available(),
                                                default_to_first_choice=True)
     trainer = Trainer.by_name(trainer_choice).from_params(model=model,
-                                                          serialization_dir="out",
+                                                          serialization_dir="out2",
                                                           iterator=iterator,
                                                           train_data=train_data,
                                                           validation_data=validation_data,

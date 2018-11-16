@@ -71,6 +71,7 @@ class BidirectionalAttentionFlow(Model):
                  phrase_layer: Seq2SeqEncoder,
                  similarity_function: SimilarityFunction,
                  similarity_function_relevant: SimilarityFunction,
+                 similarity_function_relevant_span: SimilarityFunction,
                  modeling_layer: Seq2SeqEncoder,
                  span_end_encoder: Seq2SeqEncoder,
                  dropout: float = 0.2,
@@ -85,16 +86,17 @@ class BidirectionalAttentionFlow(Model):
         self._phrase_layer = phrase_layer
         self._matrix_attention = LegacyMatrixAttention(similarity_function)
         self._matrix_attention_relevant = LegacyMatrixAttention(similarity_function_relevant)
+        self._matrix_attention_relevant_span = LegacyMatrixAttention(similarity_function_relevant_span)
         self._modeling_layer = modeling_layer
         self._span_end_encoder = span_end_encoder
 
         encoding_dim = phrase_layer.get_output_dim()
         modeling_dim = modeling_layer.get_output_dim()
-        span_start_input_dim = 3212 # encoding_dim * 4 + modeling_dim
+        span_start_input_dim = 3224 # encoding_dim * 4 + modeling_dim
         self._span_start_predictor = TimeDistributed(torch.nn.Linear(span_start_input_dim, 1))
 
         span_end_encoding_dim = span_end_encoder.get_output_dim()
-        span_end_input_dim = 8030 # encoding_dim * 4 + span_end_encoding_dim
+        span_end_input_dim = 8060 # encoding_dim * 4 + span_end_encoding_dim
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
 
         # Bidaf has lots of layer dimensions which need to match up - these aren't necessarily
@@ -259,6 +261,18 @@ class BidirectionalAttentionFlow(Model):
         # start_vectors = [relevant_question_start_representations[idx:idx+1, i, :] for idx, i in enumerate(relevant_start_indices_array)]
         # end_vectors = [relevant_question_start_representations[idx:idx+1, i, :] for idx, i in enumerate(relevant_end_indices_array)]
 
+        # creating span representations
+        span_representations = []
+        for idx, pair in enumerate(relevant_span_indices_array):
+            pair_representations = encoded_relevant_passage[idx, list(pair), :]
+            mean_representations =  pair_representations.mean(dim=0).unsqueeze(dim=0)
+            span_representations.append(torch.cat([pair_representations, mean_representations]).unsqueeze(dim=0))
+
+        span_representations = torch.cat(span_representations)
+
+        span_similarity_with_relevants = self._matrix_attention_relevant_span(encoded_passage, span_representations)
+        span_attention_with_relevants = util.masked_softmax(span_similarity_with_relevants,None)
+
         span_vectors = torch.cat([relevant_question_start_representations[idx:idx + 1, list(pair), :] for idx, pair in enumerate(relevant_span_indices_array)])
 
         # start_vectors_concat = torch.cat(start_vectors, dim=0)
@@ -306,7 +320,9 @@ class BidirectionalAttentionFlow(Model):
                                           passage_question_similarity_with_relevants,
                                           passage_question_attention_with_relevants,
                                           passage_question_vectors_relevant,
-                                          question_passage_attention_relevant], dim=-1)
+                                          question_passage_attention_relevant,
+                                          span_similarity_with_relevants,
+                                          span_attention_with_relevants], dim=-1)
 
         modeled_passage = self._dropout(self._modeling_layer(final_merged_passage, passage_lstm_mask))
         modeling_dim = modeled_passage.size(-1)
