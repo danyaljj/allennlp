@@ -266,8 +266,8 @@ class BidirectionalAttentionFlow(Model):
         for idx, pair in enumerate(relevant_span_indices_array):
             # pair_representations = encoded_relevant_passage[idx, list(pair), :]
             mean_representations =  encoded_relevant_passage[idx, list(range(pair[0], pair[1]+1)), :].mean(dim=0).unsqueeze(dim=0)
-            # span_representations.append(torch.cat([pair_representations, mean_representations]).unsqueeze(dim=0))
-            span_representations.append(mean_representations)
+            span_representations.append(torch.cat([mean_representations]).unsqueeze(dim=0))
+            # span_representations.append(mean_representations)
 
         span_representations = torch.cat(span_representations)
 
