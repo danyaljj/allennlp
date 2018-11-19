@@ -92,7 +92,7 @@ class BidirectionalAttentionFlow(Model):
 
         encoding_dim = phrase_layer.get_output_dim()
         modeling_dim = modeling_layer.get_output_dim()
-        span_start_input_dim = 3224 # encoding_dim * 4 + modeling_dim
+        span_start_input_dim = 3216 # encoding_dim * 4 + modeling_dim
         self._span_start_predictor = TimeDistributed(torch.nn.Linear(span_start_input_dim, 1))
 
         span_end_encoding_dim = span_end_encoder.get_output_dim()
