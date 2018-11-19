@@ -96,7 +96,7 @@ class BidirectionalAttentionFlow(Model):
         self._span_start_predictor = TimeDistributed(torch.nn.Linear(span_start_input_dim, 1))
 
         span_end_encoding_dim = span_end_encoder.get_output_dim()
-        span_end_input_dim = 8060 # encoding_dim * 4 + span_end_encoding_dim
+        span_end_input_dim = 8040 # encoding_dim * 4 + span_end_encoding_dim
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
 
         # Bidaf has lots of layer dimensions which need to match up - these aren't necessarily
