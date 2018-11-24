@@ -92,11 +92,11 @@ class BidirectionalAttentionFlow(Model):
 
         encoding_dim = phrase_layer.get_output_dim()
         modeling_dim = modeling_layer.get_output_dim()
-        span_start_input_dim = 3216 # encoding_dim * 4 + modeling_dim
+        span_start_input_dim = 1604 # encoding_dim * 4 + modeling_dim
         self._span_start_predictor = TimeDistributed(torch.nn.Linear(span_start_input_dim, 1))
 
         span_end_encoding_dim = span_end_encoder.get_output_dim()
-        span_end_input_dim = 8040 # encoding_dim * 4 + span_end_encoding_dim
+        span_end_input_dim = 4010 # encoding_dim * 4 + span_end_encoding_dim
         self._span_end_predictor = TimeDistributed(torch.nn.Linear(span_end_input_dim, 1))
 
         # Bidaf has lots of layer dimensions which need to match up - these aren't necessarily
@@ -247,83 +247,83 @@ class BidirectionalAttentionFlow(Model):
 
         # the ideas is to select the span representations that correspond to the correct spans.
         # TOOD is it bad that we bring the data into CPU here?
-        relevant_start_indices_array = [x[0] for x in relevant_span_start.data.cpu().numpy()]
-        relevant_end_indices_array = [x[0] for x in relevant_span_end.data.cpu().numpy()]
-        relevant_span_indices_array = list(zip(relevant_start_indices_array, relevant_end_indices_array))
+        # relevant_start_indices_array = [x[0] for x in relevant_span_start.data.cpu().numpy()]
+        # relevant_end_indices_array = [x[0] for x in relevant_span_end.data.cpu().numpy()]
+        # relevant_span_indices_array = list(zip(relevant_start_indices_array, relevant_end_indices_array))
 
-        relevant_question_start_representations = torch.cat([
-            encoded_relevant_passage,
-            relevant_passage_question_vectors,
-            (encoded_relevant_passage * relevant_passage_question_vectors),
-            (encoded_relevant_passage * tiled_relevant_question_passage_vector)
-            ], dim=-1)
+
+        # relevant_question_start_representations = torch.cat([
+        #     encoded_relevant_passage,
+        #     relevant_passage_question_vectors,
+        #     (encoded_relevant_passage * relevant_passage_question_vectors),
+        #     (encoded_relevant_passage * tiled_relevant_question_passage_vector)
+        #     ], dim=-1)
 
         # start_vectors = [relevant_question_start_representations[idx:idx+1, i, :] for idx, i in enumerate(relevant_start_indices_array)]
         # end_vectors = [relevant_question_start_representations[idx:idx+1, i, :] for idx, i in enumerate(relevant_end_indices_array)]
 
         # creating span representations
-        span_representations = []
-        for idx, pair in enumerate(relevant_span_indices_array):
-            # pair_representations = encoded_relevant_passage[idx, list(pair), :]
-            mean_representations =  encoded_relevant_passage[idx, list(range(pair[0], pair[1]+1)), :].mean(dim=0).unsqueeze(dim=0)
-            span_representations.append(torch.cat([mean_representations]).unsqueeze(dim=0))
-            # span_representations.append(mean_representations)
+        # span_representations = []
+        # for idx, pair in enumerate(relevant_span_indices_array):
+        #     # pair_representations = encoded_relevant_passage[idx, list(pair), :]
+        #     mean_representations =  encoded_relevant_passage[idx, list(range(pair[0], pair[1]+1)), :].mean(dim=0).unsqueeze(dim=0)
+        #     span_representations.append(torch.cat([mean_representations]).unsqueeze(dim=0))
+        #     # span_representations.append(mean_representations)
 
-        span_representations = torch.cat(span_representations)
+        # span_representations = torch.cat(span_representations)
+        # span_similarity_with_relevants = self._matrix_attention_relevant_span(encoded_passage, span_representations)
+        # span_attention_with_relevants = util.masked_softmax(span_similarity_with_relevants,None)
 
-        span_similarity_with_relevants = self._matrix_attention_relevant_span(encoded_passage, span_representations)
-        span_attention_with_relevants = util.masked_softmax(span_similarity_with_relevants,None)
+        # TODO for debuging; drop it later
+        if True:
+            start_indices_array = [x[0] for x in span_start.data.cpu().numpy()]
+            end_indices_array = [x[0] for x in span_end.data.cpu().numpy()]
+            span_indices_array = list(zip(start_indices_array, end_indices_array))
 
-        span_vectors = torch.cat([relevant_question_start_representations[idx:idx + 1, list(pair), :] for idx, pair in enumerate(relevant_span_indices_array)])
+            # creating span representations
+            span_representations_gold = []
+            for idx, pair in enumerate(span_indices_array):
+                # pair_representations = encoded_relevant_passage[idx, list(pair), :]
+                mean_representations =  encoded_passage[idx, list(range(pair[0], pair[1]+1)), :].mean(dim=0).unsqueeze(dim=0)
+                span_representations_gold.append(torch.cat([mean_representations]).unsqueeze(dim=0))
 
-        # start_vectors_concat = torch.cat(start_vectors, dim=0)
-        # end_vectors_concat = torch.cat(end_vectors, dim=0)
+            span_representations_gold = torch.cat(span_representations_gold)
 
-        # Shape: (batch_size, passage_length, encoding_dim * 4)
-        final_merged_passage_before_relevant = torch.cat([encoded_passage,
-                                          passage_question_vectors,
-                                          encoded_passage * passage_question_vectors,
-                                          encoded_passage * tiled_question_passage_vector],
-                                         dim=-1)
-
-
-        passage_question_similarity_with_relevants = self._matrix_attention_relevant(final_merged_passage_before_relevant, span_vectors)
-
-        passage_question_attention_with_relevants = util.masked_softmax(passage_question_similarity_with_relevants, None)
-
-        # passage_question_attention = util.masked_softmax(passage_question_similarity, question_mask)
-        # Shape: (batch_size, passage_length, encoding_dim)
-        passage_question_vectors_relevant = util.weighted_sum(span_vectors, passage_question_attention_with_relevants)
-
-        # We replace masked values with something really negative here, so they don't affect the
-        # max below.
-        # masked_similarity = util.replace_masked_values(passage_question_similarity,
-        #                                                question_mask.unsqueeze(1),
-        #                                                -1e7)
-        # Shape: (batch_size, passage_length)
-        # question_passage_similarity = masked_similarity.max(dim=-1)[0].squeeze(-1)
-        # Shape: (batch_size, passage_length)
-        question_passage_attention_relevant = util.masked_softmax(passage_question_similarity_with_relevants, None)
-        # Shape: (batch_size, encoding_dim)
-        # question_passage_vector_relevant = util.weighted_sum(encoded_passage, question_passage_attention_relevant)
-        # Shape: (batch_size, passage_length, encoding_dim)
-        # tiled_question_passage_vector = question_passage_vector.unsqueeze(1).expand(batch_size,
-        #                                                                             passage_length,
-        #                                                                             encoding_dim)
+            span_similarity_with_gold = self._matrix_attention_relevant_span(encoded_passage, span_representations_gold)
+            span_attention_with_gold = util.masked_softmax(span_similarity_with_gold,None)
 
 
+
+        # span_vectors = torch.cat([relevant_question_start_representations[idx:idx + 1, list(pair), :] for idx, pair in enumerate(relevant_span_indices_array)])
+
+
+        # final_merged_passage_before_relevant = torch.cat([encoded_passage,
+        #                                   passage_question_vectors,
+        #                                   encoded_passage * passage_question_vectors,
+        #                                   encoded_passage * tiled_question_passage_vector],
+        #                                  dim=-1)
+
+        # passage_question_similarity_with_relevants = self._matrix_attention_relevant(final_merged_passage_before_relevant, span_vectors)
+
+        # passage_question_attention_with_relevants = util.masked_softmax(passage_question_similarity_with_relevants, None)
+
+        # passage_question_vectors_relevant = util.weighted_sum(span_vectors, passage_question_attention_with_relevants)
+        # question_passage_attention_relevant = util.masked_softmax(passage_question_similarity_with_relevants, None)
 
 
         final_merged_passage = torch.cat([encoded_passage,
                                           passage_question_vectors,
                                           encoded_passage * passage_question_vectors,
                                           encoded_passage * tiled_question_passage_vector,
-                                          passage_question_similarity_with_relevants,
-                                          passage_question_attention_with_relevants,
-                                          passage_question_vectors_relevant,
-                                          question_passage_attention_relevant,
-                                          span_similarity_with_relevants,
-                                          span_attention_with_relevants], dim=-1)
+                                          # passage_question_similarity_with_relevants,
+                                          # passage_question_attention_with_relevants,
+                                          # passage_question_vectors_relevant,
+                                          # question_passage_attention_relevant,
+                                          # span_similarity_with_relevants,
+                                          # span_attention_with_relevants,
+                                          span_similarity_with_gold,
+                                          span_attention_with_gold
+                                          ], dim=-1)
 
         modeled_passage = self._dropout(self._modeling_layer(final_merged_passage, passage_lstm_mask))
         modeling_dim = modeled_passage.size(-1)
