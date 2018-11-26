@@ -10,6 +10,7 @@ from allennlp.data.instance import Instance
 from allennlp.data.dataset_readers.reading_comprehension import util
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token, Tokenizer, WordTokenizer
+from allennlp.knn.nearest_questions import NearestNeighborQuestionExtractor
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -42,6 +43,7 @@ class SquadReader(DatasetReader):
         super().__init__(lazy)
         self._tokenizer = tokenizer or WordTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
+        self._nearest_neighbor_reader = NearestNeighborQuestionExtractor()
 
     @overrides
     def _read(self, file_path: str):
@@ -54,6 +56,7 @@ class SquadReader(DatasetReader):
             dataset = dataset_json['data']
         logger.info("Reading the dataset")
         for article in dataset:
+            paragraph_title = article["title"]
             for paragraph_json in article['paragraphs']:
                 paragraph = paragraph_json["context"]
                 tokenized_paragraph = self._tokenizer.tokenize(paragraph)
@@ -67,7 +70,7 @@ class SquadReader(DatasetReader):
                                                      paragraph,
                                                      zip(span_starts, span_ends),
                                                      answer_texts,
-                                                     tokenized_paragraph)
+                                                     tokenized_paragraph, paragraph_title)
                     yield instance
 
     @overrides
@@ -76,7 +79,8 @@ class SquadReader(DatasetReader):
                          passage_text: str,
                          char_spans: List[Tuple[int, int]] = None,
                          answer_texts: List[str] = None,
-                         passage_tokens: List[Token] = None) -> Instance:
+                         passage_tokens: List[Token] = None,
+                         paragraph_title: str = "") -> Instance:
         # pylint: disable=arguments-differ
         if not passage_tokens:
             passage_tokens = self._tokenizer.tokenize(passage_text)
@@ -89,6 +93,7 @@ class SquadReader(DatasetReader):
         for char_span_start, char_span_end in char_spans:
             (span_start, span_end), error = util.char_span_to_token_span(passage_offsets,
                                                                          (char_span_start, char_span_end))
+
             if error:
                 logger.debug("Passage: %s", passage_text)
                 logger.debug("Passage tokens: %s", passage_tokens)
@@ -99,9 +104,48 @@ class SquadReader(DatasetReader):
                 logger.debug("Answer: %s", passage_text[char_span_start:char_span_end])
             token_spans.append((span_start, span_end))
 
+        relevant_questions = self._nearest_neighbor_reader.retrieve_best_questions(question_text.strip(), paragraph_title, 5)
+
+        if len(relevant_questions) == 0:
+            print("question_text:", question_text)
+
+        assert len(relevant_questions) > 4, "not enough questions were found"
+
+        relevant_question_tokens = []
+        relevant_passage_tokens = []
+        relevant_span_start = []
+        relevant_span_end = []
+
+        for i in [0, 1, 2, 3, 4]:
+            question_tokens1 = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[i][2])]
+            relevant_question_tokens.append(question_tokens1)
+
+            passage_tokens1 = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[i][3])]
+            relevant_passage_tokens.append(passage_tokens1)
+
+            relevant_span_start.append(relevant_questions[i][4])
+            relevant_span_end.append(relevant_questions[i][5])
+
+        # relevant_passage_tokens = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[0][3])]
+
+        assert len(relevant_questions) > 0, f"the number of relevant questions is zero {question_text}"
+
+        #TODO only for debugging purpose; drop it later
+        additional_metadata = {}
+        additional_metadata["relevant_question_tokens"] = relevant_question_tokens
+        additional_metadata["relevant_passage_tokens"] = relevant_passage_tokens
+        additional_metadata["relevant_span_start"] = relevant_span_start
+        additional_metadata["relevant_span_end"] = relevant_span_end
+
         return util.make_reading_comprehension_instance(self._tokenizer.tokenize(question_text),
                                                         passage_tokens,
                                                         self._token_indexers,
                                                         passage_text,
                                                         token_spans,
-                                                        answer_texts)
+                                                        answer_texts,
+                                                        relevant_question_tokens=relevant_question_tokens,
+                                                        relevant_passage_tokens=relevant_passage_tokens,
+                                                        relevant_span_start=relevant_span_start,
+                                                        relevant_span_end=relevant_span_end,
+                                                        passage_title=paragraph_title,
+                                                        additional_metadata=additional_metadata)
