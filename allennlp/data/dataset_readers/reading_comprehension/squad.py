@@ -106,20 +106,36 @@ class SquadReader(DatasetReader):
 
         relevant_questions = self._nearest_neighbor_reader.retrieve_best_questions(question_text.strip(), paragraph_title, 5)
 
-
         if len(relevant_questions) == 0:
             print("question_text:", question_text)
 
+        assert len(relevant_questions) > 4, "not enough questions were found"
 
-        assert len(relevant_questions) > 0, "not enough questions were found"
+        relevant_question_tokens = []
+        relevant_passage_tokens = []
+        relevant_span_start = []
+        relevant_span_end = []
 
-        # for now, only use the first question
-        relevant_question_tokens = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[0][2])]
-        relevant_passage_tokens = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[0][3])]
-        relevant_span_start = relevant_questions[0][4]
-        relevant_span_end = relevant_questions[0][5]
+        for i in [0, 1, 2, 3, 4]:
+            question_tokens1 = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[i][2])]
+            relevant_question_tokens.append(question_tokens1)
+
+            passage_tokens1 = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[i][3])]
+            relevant_passage_tokens.append(passage_tokens1)
+
+            relevant_span_start.append(relevant_questions[i][4])
+            relevant_span_end.append(relevant_questions[i][5])
+
+        # relevant_passage_tokens = [Token(text = x, idx=i) for i, x in enumerate(relevant_questions[0][3])]
 
         assert len(relevant_questions) > 0, f"the number of relevant questions is zero {question_text}"
+
+        #TODO only for debugging purpose; drop it later
+        additional_metadata = {}
+        additional_metadata["relevant_question_tokens"] = relevant_question_tokens
+        additional_metadata["relevant_passage_tokens"] = relevant_passage_tokens
+        additional_metadata["relevant_span_start"] = relevant_span_start
+        additional_metadata["relevant_span_end"] = relevant_span_end
 
         return util.make_reading_comprehension_instance(self._tokenizer.tokenize(question_text),
                                                         passage_tokens,
@@ -131,4 +147,5 @@ class SquadReader(DatasetReader):
                                                         relevant_passage_tokens=relevant_passage_tokens,
                                                         relevant_span_start=relevant_span_start,
                                                         relevant_span_end=relevant_span_end,
-                                                        passage_title=paragraph_title)
+                                                        passage_title=paragraph_title,
+                                                        additional_metadata=additional_metadata)

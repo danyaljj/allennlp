@@ -263,34 +263,34 @@ class BidirectionalAttentionFlow(Model):
         # end_vectors = [relevant_question_start_representations[idx:idx+1, i, :] for idx, i in enumerate(relevant_end_indices_array)]
 
         # creating span representations
-        # span_representations = []
-        # for idx, pair in enumerate(relevant_span_indices_array):
-        #     # pair_representations = encoded_relevant_passage[idx, list(pair), :]
-        #     mean_representations =  encoded_relevant_passage[idx, list(range(pair[0], pair[1]+1)), :].mean(dim=0).unsqueeze(dim=0)
-        #     span_representations.append(torch.cat([mean_representations]).unsqueeze(dim=0))
-        #     # span_representations.append(mean_representations)
+        span_representations = []
+        for idx, pair in enumerate(relevant_span_indices_array):
+            # pair_representations = encoded_relevant_passage[idx, list(pair), :]
+            mean_representations =  encoded_relevant_passage[idx, list(range(pair[0], pair[1]+1)), :].mean(dim=0).unsqueeze(dim=0)
+            span_representations.append(torch.cat([mean_representations]).unsqueeze(dim=0))
+            # span_representations.append(mean_representations)
 
-        # span_representations = torch.cat(span_representations)
-        # span_similarity_with_relevants = self._matrix_attention_relevant_span(encoded_passage, span_representations)
-        # span_attention_with_relevants = util.masked_softmax(span_similarity_with_relevants,None)
+        span_representations = torch.cat(span_representations)
+        span_similarity_with_relevants = self._matrix_attention_relevant_span(encoded_passage, span_representations)
+        span_attention_with_relevants = util.masked_softmax(span_similarity_with_relevants,None)
 
         # TODO for debuging; drop it later
-        if True:
-            start_indices_array = [x[0] for x in span_start.data.cpu().numpy()]
-            end_indices_array = [x[0] for x in span_end.data.cpu().numpy()]
-            span_indices_array = list(zip(start_indices_array, end_indices_array))
-
-            # creating span representations
-            span_representations_gold = []
-            for idx, pair in enumerate(span_indices_array):
-                # pair_representations = encoded_relevant_passage[idx, list(pair), :]
-                mean_representations =  encoded_passage[idx, list(range(pair[0], pair[1]+1)), :].mean(dim=0).unsqueeze(dim=0)
-                span_representations_gold.append(torch.cat([mean_representations]).unsqueeze(dim=0))
-
-            span_representations_gold = torch.cat(span_representations_gold)
-
-            span_similarity_with_gold = self._matrix_attention_relevant_span(encoded_passage, span_representations_gold)
-            span_attention_with_gold = util.masked_softmax(span_similarity_with_gold,None)
+        # if True:
+        #     start_indices_array = [x[0] for x in span_start.data.cpu().numpy()]
+        #     end_indices_array = [x[0] for x in span_end.data.cpu().numpy()]
+        #     span_indices_array = list(zip(start_indices_array, end_indices_array))
+        #
+        #     # creating span representations
+        #     span_representations_gold = []
+        #     for idx, pair in enumerate(span_indices_array):
+        #         # pair_representations = encoded_relevant_passage[idx, list(pair), :]
+        #         mean_representations =  encoded_passage[idx, list(range(pair[0], pair[1]+1)), :].mean(dim=0).unsqueeze(dim=0)
+        #         span_representations_gold.append(torch.cat([mean_representations]).unsqueeze(dim=0))
+        #
+        #     span_representations_gold = torch.cat(span_representations_gold)
+        #
+        #     span_similarity_with_gold = self._matrix_attention_relevant_span(encoded_passage, span_representations_gold)
+        #     span_attention_with_gold = util.masked_softmax(span_similarity_with_gold,None)
 
 
 
@@ -319,10 +319,10 @@ class BidirectionalAttentionFlow(Model):
                                           # passage_question_attention_with_relevants,
                                           # passage_question_vectors_relevant,
                                           # question_passage_attention_relevant,
-                                          # span_similarity_with_relevants,
-                                          # span_attention_with_relevants,
-                                          span_similarity_with_gold,
-                                          span_attention_with_gold
+                                          span_similarity_with_relevants,
+                                          span_attention_with_relevants,
+                                          # span_similarity_with_gold,
+                                          # span_attention_with_gold
                                           ], dim=-1)
 
         modeled_passage = self._dropout(self._modeling_layer(final_merged_passage, passage_lstm_mask))
