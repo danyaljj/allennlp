@@ -1,6 +1,5 @@
 import json
 
-
 class Prerequisit_Skills():
 
     skills_map = {
@@ -21,7 +20,7 @@ class Prerequisit_Skills():
         14: "Nonsense",
     }
 
-    folder = "/Users/daniel/ideaProjects/allennlp/QA_datasets/prerequisit_data/"
+    folder = "/Users/daniel/ideaProjects/allennlp_invariances/QA_datasets/prerequisit_data/"
     # {"original_id": "mc160.dev.0",
     #  "annotations": [
     #      {"skills": [13], "sents_indices": [[0, 5]], "skill_count": 0, "nonsense": false},
@@ -46,5 +45,5 @@ class Prerequisit_Skills():
 
         return all_anno
 
-preq = Prerequisit_Skills()
-print(len(preq.read_prereq_file("mctest.json")))
+# preq = Prerequisit_Skills()
+# print(len(preq.read_prereq_file("mctest.json")))
