@@ -230,7 +230,6 @@ def make_reading_comprehension_instance(question_tokens: List[Token],
         relevant_span_end_list.append(IndexField(relevant_span_end[idx], passage_field))
         relevant_question_tokens_list.append(TextField(relevant_question_tokens[idx], token_indexers))
 
-    # relevant_passage_field = TextField(relevant_passage_tokens, token_indexers)
     fields['relevant_passage'] = ListField(relevant_passage_tokens_list)
     fields['relevant_span_start'] = ListField(relevant_span_start_list)
     fields['relevant_span_end'] = ListField(relevant_span_end_list)

@@ -131,7 +131,7 @@ def train():
                                                Trainer.list_available(),
                                                default_to_first_choice=True)
     trainer = Trainer.by_name(trainer_choice).from_params(model=model,
-                                                          serialization_dir="out2",
+                                                          serialization_dir="out3",
                                                           iterator=iterator,
                                                           train_data=train_data,
                                                           validation_data=validation_data,
@@ -185,10 +185,13 @@ def squad_subset():
     with open('/Users/daniel/ideaProjects/allennlp/allennlp/knn/data/squad-dev-v1.1.json') as f:
         dataset_json = json.load(f)
         dataset = dataset_json['data']
-        paragraphs_new = dataset[0]['paragraphs'][0:1]
+        dataset[0]['paragraphs'][0]["qas"] = dataset[0]['paragraphs'][0]["qas"][0:5]
+        dataset[0]['paragraphs'][1]["qas"] = dataset[0]['paragraphs'][1]["qas"][0:5]
+        dataset[0]['paragraphs'][2]["qas"] = dataset[0]['paragraphs'][2]["qas"][0:5]
+        paragraphs_new = dataset[0]['paragraphs'][0:2]
     dataset_new["data"].append({"title": "Super_Bowl_50", "paragraphs": paragraphs_new})
 
-    with open('/Users/daniel/ideaProjects/allennlp/allennlp/knn/data/squad-dev-v1.1-small.json', 'w') as outfile:
+    with open('/Users/daniel/ideaProjects/allennlp/allennlp/knn/data/squad-dev-v1.1-small-3.json', 'w') as outfile:
         json.dump(dataset_new, outfile)
 
 # def openie_test():
